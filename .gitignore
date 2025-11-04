@@ -1,0 +1,8 @@
+# No subir nada de carpeta imagenes
+imagenes
+
+# Ignorar archivos de configuracion de entorno de desarrollo
+.vscode
+.idea
+*.code-workspace
+
