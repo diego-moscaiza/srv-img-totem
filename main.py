@@ -1,162 +1,189 @@
 from fastapi import FastAPI, HTTPException
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 import os
 from pathlib import Path
-from typing import List
+from typing import List, Dict
+import catalogos_manager
 
 app = FastAPI(
-    title="Servidor de Imágenes",
-    description="API para servir imágenes locales",
-    version="1.0.0"
+    title="Servidor de Imágenes para Catálogos Dinámicos",
+    description="API para servir imágenes y gestionar catálogos mensuales",
+    version="2.0.0"
 )
 
-# Directorio donde se almacenan las imágenes
+# Directorio base de imágenes
 IMAGENES_DIR = "imagenes"
-
-# Crear el directorio si no existe
 Path(IMAGENES_DIR).mkdir(exist_ok=True)
 
-# Montar directorio estático para servir archivos (esto SÍ funciona con subdirectorios)
+# Montar directorio estático
 app.mount("/static", StaticFiles(directory=IMAGENES_DIR), name="static")
 
-# Extensiones permitidas
-EXTENSIONES_PERMITIDAS = {'.png', '.jpg', '.jpeg', '.gif', '.bmp', '.webp'}
-
-def es_imagen_valida(nombre_archivo: str) -> bool:
-    """Verifica si el archivo es una imagen válida"""
-    return Path(nombre_archivo).suffix.lower() in EXTENSIONES_PERMITIDAS
-
-def buscar_imagen_en_subdirectorios(nombre_archivo: str) -> Path:
-    """Busca la imagen en todos los subdirectorios"""
-    for root, dirs, files in os.walk(IMAGENES_DIR):
-        for file in files:
-            if file == nombre_archivo and es_imagen_valida(file):
-                return Path(root) / file
-    return Path(root)
+# Instancia del gestor de catálogos
+catalogo_mgr = catalogos_manager.catalogo_manager
 
 @app.get("/")
 async def root():
     return {
-        "message": "Servidor de imágenes funcionando",
+        "message": "Servidor de catálogos dinámicos funcionando",
         "endpoints": {
-            "listar_imagenes": "/imagenes",
-            "obtener_imagen": "/imagen/{nombre_archivo}",
-            "ver_imagen_en_navegador": "/ver/{nombre_archivo}",
-            "acceso_directo_con_ruta": "/static/{ruta_completa}",
-            "listar_todas": "/todas-las-imagenes"
+            "imagenes": {
+                "ver_imagen": "/ver/{nombre_archivo}",
+                "ver_con_ruta": "/ver-ruta/{ruta:path}",
+                "acceso_directo": "/static/{ruta:path}"
+            },
+            "catalogos": {
+                "catalogo_activo": "/api/catalogo/activo",
+                "catalogo_mes": "/api/catalogos/{año}/{mes}",
+                "categorias": "/api/categorias/{año}/{mes}",
+                "validar_producto": "/api/validar-producto",
+                "meses_disponibles": "/api/meses-disponibles"
+            }
         }
     }
 
-@app.get("/imagenes", response_model=List[str])
-async def listar_imagenes():
-    """Lista todas las imágenes disponibles en la raíz"""
+@app.get("/api/catalogo/activo")
+async def obtener_catalogo_activo():
+    """Obtiene el catálogo del mes actual"""
     try:
-        archivos = []
-        for archivo in os.listdir(IMAGENES_DIR):
-            ruta_completa = Path(IMAGENES_DIR) / archivo
-            if ruta_completa.is_file() and es_imagen_valida(archivo):
-                archivos.append(archivo)
-        return archivos
+        catalogo_info = catalogo_mgr.detectar_catalogo_actual()
+        catalogo = catalogo_mgr.cargar_catalogo_mes(
+            catalogo_info["año"], 
+            catalogo_info["mes"]
+        )
+        
+        return {
+            "catalogo_info": catalogo_info,
+            "productos_por_categoria": {cat: len(prods) for cat, prods in catalogo.items()},
+            "categorias_disponibles": list(catalogo.keys())
+        }
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error al listar imágenes: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error al obtener catálogo activo: {str(e)}")
 
-@app.get("/todas-las-imagenes")
-async def listar_todas_las_imagenes():
-    """Lista TODAS las imágenes incluyendo subdirectorios"""
+@app.get("/api/catalogos/{año}/{mes}")
+async def obtener_catalogo_mes(año: str, mes: str):
+    """Obtiene catálogo de un mes específico"""
     try:
-        archivos = []
-        for root, dirs, files in os.walk(IMAGENES_DIR):
-            for file in files:
-                if es_imagen_valida(file):
-                    ruta_relativa = Path(root) / file
-                    # Hacer la ruta relativa al directorio IMAGENES_DIR
-                    ruta_relativa = ruta_relativa.relative_to(IMAGENES_DIR)
-                    archivos.append(str(ruta_relativa))
-        return archivos
+        catalogo = catalogo_mgr.cargar_catalogo_mes(año, mes)
+        return {
+            "año": año,
+            "mes": mes,
+            "catalogo": catalogo,
+            "total_productos": sum(len(prods) for prods in catalogo.values())
+        }
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error al listar imágenes: {str(e)}")
+        raise HTTPException(status_code=404, detail=f"Catálogo no encontrado: {str(e)}")
 
-@app.get("/imagen/{nombre_archivo}")
-async def obtener_imagen(nombre_archivo: str):
-    """Devuelve la imagen como archivo para descargar (busca en subdirectorios)"""
-    # Primero buscar en raíz
-    ruta_raiz = Path(IMAGENES_DIR) / nombre_archivo
-    
-    if ruta_raiz.exists() and ruta_raiz.is_file() and es_imagen_valida(nombre_archivo):
-        return FileResponse(path=ruta_raiz, filename=nombre_archivo)
-    
-    # Si no está en raíz, buscar en subdirectorios
-    ruta_encontrada = buscar_imagen_en_subdirectorios(nombre_archivo)
-    
-    if ruta_encontrada and ruta_encontrada.exists():
-        return FileResponse(path=ruta_encontrada, filename=nombre_archivo)
-    
-    raise HTTPException(
-        status_code=404, 
-        detail=f"Imagen no encontrada: {nombre_archivo}. Usa /todas-las-imagenes para ver las disponibles"
-    )
+@app.get("/api/categorias/{año}/{mes}")
+async def obtener_categorias_mes(año: str, mes: str):
+    """Obtiene categorías disponibles en un mes"""
+    try:
+        catalogo = catalogo_mgr.cargar_catalogo_mes(año, mes)
+        
+        categorias = []
+        for categoria, productos in catalogo.items():
+            categorias.append({
+                "nombre": categoria,
+                "total_productos": len(productos),
+                "productos": [{"id": p["id"], "nombre": p["nombre"]} for p in productos]
+            })
+        
+        return categorias
+    except Exception as e:
+        raise HTTPException(status_code=404, detail=f"Error al obtener categorías: {str(e)}")
 
+@app.post("/api/validar-producto")
+async def validar_producto(data: dict):
+    """Valida la disponibilidad de un producto"""
+    try:
+        producto_id = data.get("producto_id")
+        categoria = data.get("categoria")
+        
+        if not producto_id or not categoria:
+            raise HTTPException(status_code=400, detail="producto_id y categoria son requeridos")
+        
+        resultado = catalogo_mgr.validar_producto(producto_id, categoria)
+        return resultado
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error al validar producto: {str(e)}")
+
+@app.get("/api/meses-disponibles")
+async def obtener_meses_disponibles():
+    """Obtiene lista de meses con catálogos disponibles"""
+    try:
+        meses = catalogo_mgr.obtener_meses_disponibles()
+        return {
+            "total_meses": len(meses),
+            "meses": meses
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error al obtener meses disponibles: {str(e)}")
+
+# Endpoints para servir imágenes (versión mejorada)
 @app.get("/ver/{nombre_archivo}")
 async def ver_imagen(nombre_archivo: str):
     """Muestra la imagen directamente en el navegador (busca en subdirectorios)"""
-    # Primero buscar en raíz
-    ruta_raiz = Path(IMAGENES_DIR) / nombre_archivo
-    
-    if ruta_raiz.exists() and ruta_raiz.is_file() and es_imagen_valida(nombre_archivo):
-        return FileResponse(ruta_raiz)
-    
-    # Si no está en raíz, buscar en subdirectorios
-    ruta_encontrada = buscar_imagen_en_subdirectorios(nombre_archivo)
-    
-    if ruta_encontrada and ruta_encontrada.exists():
-        return FileResponse(ruta_encontrada)
-    
-    raise HTTPException(
-        status_code=404, 
-        detail=f"Imagen no encontrada: {nombre_archivo}"
-    )
+    try:
+        # Buscar en todos los subdirectorios
+        for root, dirs, files in os.walk(IMAGENES_DIR):
+            for file in files:
+                if file == nombre_archivo:
+                    ruta_completa = Path(root) / file
+                    if ruta_completa.exists():
+                        return FileResponse(ruta_completa)
+        
+        raise HTTPException(status_code=404, detail=f"Imagen no encontrada: {nombre_archivo}")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error al buscar imagen: {str(e)}")
 
-# NUEVO ENDPOINT para acceder con ruta completa
 @app.get("/ver-ruta/{ruta:path}")
 async def ver_imagen_con_ruta(ruta: str):
     """Muestra la imagen usando la ruta completa desde imágenes/"""
-    ruta_imagen = Path(IMAGENES_DIR) / ruta
-    
-    if not ruta_imagen.exists():
-        raise HTTPException(status_code=404, detail=f"Imagen no encontrada: {ruta}")
-    
-    if not ruta_imagen.is_file():
-        raise HTTPException(status_code=400, detail="Ruta inválida")
-    
-    if not es_imagen_valida(ruta_imagen.name):
-        raise HTTPException(status_code=400, detail="Tipo de archivo no permitido")
-    
-    return FileResponse(ruta_imagen)
+    try:
+        ruta_imagen = Path(IMAGENES_DIR) / ruta
+        
+        if not ruta_imagen.exists():
+            raise HTTPException(status_code=404, detail=f"Imagen no encontrada: {ruta}")
+        
+        if not ruta_imagen.is_file():
+            raise HTTPException(status_code=400, detail="Ruta inválida")
+        
+        return FileResponse(ruta_imagen)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error al cargar imagen: {str(e)}")
 
 @app.get("/diagnostico")
 async def diagnostico():
     """Endpoint para diagnosticar problemas"""
-    diagnostico_info = {
-        "directorio_actual": os.getcwd(),
-        "directorio_imagenes": IMAGENES_DIR,
-        "existe_directorio": Path(IMAGENES_DIR).exists(),
-        "estructura_completa": []
-    }
-    
-    if Path(IMAGENES_DIR).exists():
-        for root, dirs, files in os.walk(IMAGENES_DIR):
-            for file in files:
-                if es_imagen_valida(file):
-                    ruta_completa = Path(root) / file
-                    ruta_relativa = ruta_completa.relative_to(IMAGENES_DIR)
-                    diagnostico_info["estructura_completa"].append({
-                        "ruta_relativa": str(ruta_relativa),
-                        "ruta_completa": str(ruta_completa),
-                        "existe": ruta_completa.exists()
-                    })
-    
-    return diagnostico_info
+    try:
+        catalogo_info = catalogo_mgr.detectar_catalogo_actual()
+        meses_disponibles = catalogo_mgr.obtener_meses_disponibles()
+        
+        diagnostico_info = {
+            "servidor": "activo",
+            "directorio_actual": os.getcwd(),
+            "directorio_imagenes": IMAGENES_DIR,
+            "existe_directorio": Path(IMAGENES_DIR).exists(),
+            "catalogo_actual": catalogo_info,
+            "meses_disponibles": meses_disponibles,
+            "estructura_archivos": []
+        }
+        
+        if Path(IMAGENES_DIR).exists():
+            for root, dirs, files in os.walk(IMAGENES_DIR):
+                for file in files:
+                    if file.lower().endswith(('.png', '.jpg', '.jpeg', '.gif', '.bmp', '.webp')):
+                        ruta_completa = Path(root) / file
+                        ruta_relativa = ruta_completa.relative_to(IMAGENES_DIR)
+                        diagnostico_info["estructura_archivos"].append({
+                            "ruta_relativa": str(ruta_relativa),
+                            "ruta_completa": str(ruta_completa),
+                            "existe": ruta_completa.exists()
+                        })
+        
+        return diagnostico_info
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error en diagnóstico: {str(e)}")
 
 if __name__ == "__main__":
     import uvicorn
