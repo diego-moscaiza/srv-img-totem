@@ -17,7 +17,8 @@ Un servidor simple y eficiente para servir imágenes locales a través de una AP
 ✅ Diagnóstico integrado del servidor
 
 📁 Estructura del Proyecto
-text
+
+```text
 servidor-imagenes/
 ├── imagenes/                 # Directorio principal de imágenes
 │   ├── catalogos/
@@ -30,16 +31,19 @@ servidor-imagenes/
 ├── main.py                   # Servidor FastAPI
 ├── requirements.txt          # Dependencias del proyecto
 └── README.md                # Este archivo
+```
+
 🛠 Instalación
 Clona o descarga el proyecto
 
 Instala las dependencias:
 
-bash
+```bash
 pip install fastapi uvicorn python-multipart
 Ejecuta el servidor:
+```
 
-bash
+```bash
 uvicorn main:app --reload --host 0.0.0.0 --port 8000
 📋 Endpoints Disponibles
 🔍 Información y Diagnóstico
@@ -55,21 +59,33 @@ GET	/ver-ruta/{ruta_completa}	Muestra imagen usando ruta completa desde imagenes
 GET	/imagen/{nombre_archivo}	Descarga la imagen como archivo
 GET	/static/{ruta}	Acceso directo estático a archivos
 🎯 Uso de la API
+```
+
 1. Acceso Básico por Nombre de Archivo
-text
+   
+```text
 http://localhost:8000/ver/financia-calidda-n-1.jpg
 Busca automáticamente en todos los subdirectorios
+```
 
-2. Acceso por Ruta Completa
-text
+1. Acceso por Ruta Completa
+
+```text
 http://localhost:8000/ver-ruta/masivos/financia-calidda-n-1.jpg
 http://localhost:8000/ver-ruta/catalogos/2025/noviembre/fnb/imagen.jpg
-3. Descargar Imágenes
-text
+```
+
+1. Descargar Imágenes
+
+```text
 http://localhost:8000/imagen/financia-calidda-n-1.jpg
-4. Acceso Directo Estático
-text
+```
+
+1. Acceso Directo Estático
+```text
 http://localhost:8000/static/masivos/financia-calidda-n-1.jpg
+```
+
 🔧 Configuración
 Directorio de Imágenes
 El servidor busca imágenes en el directorio imagenes/ por defecto. Puedes modificarlo cambiando la variable IMAGENES_DIR en main.py.
@@ -86,20 +102,36 @@ Documentación: http://localhost:8000/docs
 
 🚦 Ejemplos Prácticos
 Verificar que el servidor funciona:
-bash
+
+```bash
 curl http://localhost:8000/
+```
+
 Ver diagnóstico del sistema de archivos:
-bash
+
+```bash
 curl http://localhost:8000/diagnostico
+```
+
 Listar todas las imágenes disponibles:
-bash
+
+```bash
 curl http://localhost:8000/todas-las-imagenes
+```
+
 Acceder a una imagen específica:
-bash
+
+```bash
 # Si la imagen está en: imagenes/masivos/financia-calidda-n-1.jpg
 curl http://localhost:8000/ver/financia-calidda-n-1.jpg
+```
+
 # o
+
+```bash
 curl http://localhost:8000/ver-ruta/masivos/financia-calidda-n-1.jpg
+```
+
 🐛 Solución de Problemas
 Error "Not Found"
 Verifica que la imagen exista en el directorio imagenes/
