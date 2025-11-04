@@ -6,3 +6,4 @@ imagenes
 .idea
 *.code-workspace
 
+.env
