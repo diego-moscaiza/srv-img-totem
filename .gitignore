@@ -1,9 +1,26 @@
 # No subir nada de carpeta imagenes
 imagenes
+api
 
-# Ignorar archivos de configuracion de entorno de desarrollo
-.vscode
-.idea
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
 *.code-workspace
 
+# Archivos de credenciales
 .env
+
+# Logs
+*.log
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+env/
+*.egg-info/
