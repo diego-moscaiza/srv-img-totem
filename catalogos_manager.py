@@ -119,15 +119,20 @@ class CatalogoManager:
                 # Procesar cada producto para agregar información de rutas
                 productos_procesados = []
                 for producto in productos:
+                    # Obtener solo el nombre del archivo de imagen (sin ruta)
+                    imagen_original = producto.get('imagen', '')
+                    # Si la imagen ya tiene ruta, extraer solo el nombre del archivo
+                    nombre_imagen = Path(imagen_original).name if imagen_original else ''
+                    
                     # Enriquecer producto con información adicional
                     producto_enriquecido = {
                         **producto,
                         "categoria": categoria_nombre,
                         "mes_validez": f"{año}-{mes}",
                         "stock": True,  # Por defecto asumimos que tiene stock
-                        # Construir rutas dinámicamente
-                        "ruta_imagen_relativa": f"catalogos/{año}/fnb/{mes}/{nombre_carpeta}/{producto.get('imagen', '')}",
-                        "ruta_imagen_absoluta": f"/static/catalogos/{año}/fnb/{mes}/{nombre_carpeta}/{producto.get('imagen', '')}",
+                        # Construir rutas dinámicamente usando solo el nombre del archivo
+                        "ruta_imagen_relativa": f"catalogos/{año}/fnb/{mes}/{nombre_carpeta}/{nombre_imagen}",
+                        "ruta_imagen_absoluta": f"/static/catalogos/{año}/fnb/{mes}/{nombre_carpeta}/{nombre_imagen}",
                     }
                     productos_procesados.append(producto_enriquecido)
 
