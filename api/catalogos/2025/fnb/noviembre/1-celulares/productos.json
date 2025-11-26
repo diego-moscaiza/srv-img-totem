@@ -1,0 +1,32 @@
+[
+  {
+    "id": "CELCEL0091",
+    "nombre": "SAMSUNG GALAXY A06",
+    "descripcion": "128 GB - 4 GB RAM",
+    "precio": 949.00,
+    "imagen": "catalogos/2025/fnb/noviembre/1-celulares/01.png",
+    "cuotas": {
+      "3": 338.85,
+      "6": 178.87,
+      "9": 125.70,
+      "12": 99.24,
+      "18": 73.02,
+      "24": 60.15
+    }
+  },
+  {
+    "id": "CELCEL0076 ",
+    "nombre": "SAMSUNG GALAXY A15",
+    "descripcion": "256 GB - 8GB RAM",
+    "precio": 1099.00,
+    "imagen": "02.png",
+    "cuotas": {
+      "3": 392.41,
+      "6": 207.14,
+      "9": 145.57,
+      "12": 114.92,
+      "18": 84.56,
+      "24": 69.65
+    }
+  }
+]
