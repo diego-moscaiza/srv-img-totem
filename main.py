@@ -16,6 +16,12 @@ app = FastAPI(
 IMAGENES_DIR = "imagenes"
 Path(IMAGENES_DIR).mkdir(exist_ok=True)
 
+# Clase personalizada para servir PDFs en línea
+class InlinePDFResponse(FileResponse):
+    def __init__(self, path, **kwargs):
+        super().__init__(path, **kwargs)
+        self.headers["Content-Disposition"] = "inline"
+
 # Montar directorio estático
 app.mount("/static", StaticFiles(directory=IMAGENES_DIR), name="static")
 
@@ -29,6 +35,7 @@ async def root():
         "message": "Servidor de catálogos dinámicos funcionando",
         "endpoints": {
             "imagenes": {
+                "imagen_categoria": "/imagen/{anio}/{mes}/{categoria}/{nombre_imagen}",
                 "ver_imagen": "/ver/{nombre_archivo}",
                 "ver_con_ruta": "/ver-ruta/{ruta:path}",
                 "acceso_directo": "/static/{ruta:path}",
@@ -39,6 +46,11 @@ async def root():
                 "categorias": "/api/categorias/{año}/{mes}",
                 "validar_producto": "/api/validar-producto",
                 "meses_disponibles": "/api/meses-disponibles",
+            },
+            "productos": {
+                "producto_detallado": "/api/producto/{año}/{mes}/{categoria}/{producto_id}",
+                "imagen_caracteristicas": "/api/producto/caracteristicas/{año}/{mes}/{categoria}/{producto_id}",
+                "imagen_productos": "/api/producto/listado/{año}/{mes}/{categoria}/{producto_id}",
             },
             "pdfs": {
                 "pdf_categoria": "/api/pdf/{año}/{mes}/{categoria}",
@@ -112,6 +124,190 @@ async def obtener_categorias_mes(anio: str, mes: str):
         )
 
 
+@app.get("/api/producto/{anio}/{mes}/{categoria}/{producto_id}")
+async def obtener_producto_detallado(anio: str, mes: str, categoria: str, producto_id: str):
+    """Obtiene los detalles completos de un producto incluyendo imágenes"""
+    try:
+        catalogo = catalogo_mgr.cargar_catalogo_mes(anio, mes)
+        
+        # Buscar la categoría
+        categoria_encontrada = None
+        for cat_key, cat_nombre in catalogo_mgr.categoria_map.items():
+            if cat_nombre.upper() == categoria.upper() or cat_key.upper() == categoria.upper():
+                categoria_encontrada = cat_nombre
+                break
+        
+        if not categoria_encontrada or categoria_encontrada not in catalogo:
+            raise HTTPException(
+                status_code=404,
+                detail=f"Categoría '{categoria}' no encontrada"
+            )
+        
+        # Buscar el producto
+        producto = next(
+            (p for p in catalogo[categoria_encontrada] if str(p.get("id")).strip() == str(producto_id).strip()),
+            None
+        )
+        
+        if not producto:
+            raise HTTPException(
+                status_code=404,
+                detail=f"Producto '{producto_id}' no encontrado en {categoria}"
+            )
+        
+        # Agregar URLs de acceso directo a las imágenes
+        producto_detalle = {
+            **producto,
+            "urls": {
+                "imagen_listado": f"/api/producto/listado/{anio}/{mes}/{categoria_encontrada}/{producto_id}",
+                "imagen_caracteristicas": f"/api/producto/caracteristicas/{anio}/{mes}/{categoria_encontrada}/{producto_id}",
+                "imagen_directa": f"/static/{producto.get('imagen', '')}",
+                "caracteristicas_directa": f"/static/{producto.get('imagen_caracteristicas', '')}"
+            }
+        }
+        
+        return {
+            "año": anio,
+            "mes": mes,
+            "categoria": categoria_encontrada,
+            "producto": producto_detalle
+        }
+    
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error al obtener producto: {str(e)}"
+        )
+
+
+@app.get("/api/producto/caracteristicas/{anio}/{mes}/{categoria}/{producto_id}")
+async def obtener_imagen_caracteristicas(anio: str, mes: str, categoria: str, producto_id: str):
+    """Obtiene la imagen de características de un producto específico"""
+    try:
+        catalogo = catalogo_mgr.cargar_catalogo_mes(anio, mes)
+        
+        # Buscar la categoría
+        categoria_encontrada = None
+        for cat_key, cat_nombre in catalogo_mgr.categoria_map.items():
+            if cat_nombre.upper() == categoria.upper() or cat_key.upper() == categoria.upper():
+                categoria_encontrada = cat_nombre
+                break
+        
+        if not categoria_encontrada or categoria_encontrada not in catalogo:
+            raise HTTPException(
+                status_code=404,
+                detail=f"Categoría '{categoria}' no encontrada"
+            )
+        
+        # Buscar el producto
+        producto = next(
+            (p for p in catalogo[categoria_encontrada] if str(p.get("id")).strip() == str(producto_id).strip()),
+            None
+        )
+        
+        if not producto:
+            raise HTTPException(
+                status_code=404,
+                detail=f"Producto '{producto_id}' no encontrado en {categoria}"
+            )
+        
+        # Obtener ruta de imagen de características
+        imagen_caracteristicas = producto.get("imagen_caracteristicas")
+        
+        if not imagen_caracteristicas:
+            raise HTTPException(
+                status_code=404,
+                detail=f"El producto '{producto_id}' no tiene imagen de características"
+            )
+        
+        # Construir ruta completa
+        ruta_imagen = Path(IMAGENES_DIR) / imagen_caracteristicas
+        
+        if not ruta_imagen.exists():
+            raise HTTPException(
+                status_code=404,
+                detail=f"Imagen de características no encontrada: {imagen_caracteristicas}"
+            )
+        
+        return FileResponse(
+            ruta_imagen,
+            media_type="image/png"
+        )
+    
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error al obtener imagen de características: {str(e)}"
+        )
+
+
+@app.get("/api/producto/listado/{anio}/{mes}/{categoria}/{producto_id}")
+async def obtener_imagen_listado(anio: str, mes: str, categoria: str, producto_id: str):
+    """Obtiene la imagen de lista (producto) de un producto específico"""
+    try:
+        catalogo = catalogo_mgr.cargar_catalogo_mes(anio, mes)
+        
+        # Buscar la categoría
+        categoria_encontrada = None
+        for cat_key, cat_nombre in catalogo_mgr.categoria_map.items():
+            if cat_nombre.upper() == categoria.upper() or cat_key.upper() == categoria.upper():
+                categoria_encontrada = cat_nombre
+                break
+        
+        if not categoria_encontrada or categoria_encontrada not in catalogo:
+            raise HTTPException(
+                status_code=404,
+                detail=f"Categoría '{categoria}' no encontrada"
+            )
+        
+        # Buscar el producto
+        producto = next(
+            (p for p in catalogo[categoria_encontrada] if str(p.get("id")).strip() == str(producto_id).strip()),
+            None
+        )
+        
+        if not producto:
+            raise HTTPException(
+                status_code=404,
+                detail=f"Producto '{producto_id}' no encontrado en {categoria}"
+            )
+        
+        # Obtener ruta de imagen de lista
+        imagen_listado = producto.get("imagen")
+        
+        if not imagen_listado:
+            raise HTTPException(
+                status_code=404,
+                detail=f"El producto '{producto_id}' no tiene imagen de lista"
+            )
+        
+        # Construir ruta completa
+        ruta_imagen = Path(IMAGENES_DIR) / imagen_listado
+        
+        if not ruta_imagen.exists():
+            raise HTTPException(
+                status_code=404,
+                detail=f"Imagen de lista no encontrada: {imagen_listado}"
+            )
+        
+        return FileResponse(
+            ruta_imagen,
+            media_type="image/png"
+        )
+    
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error al obtener imagen de lista: {str(e)}"
+        )
+
+
 @app.post("/api/validar-producto")
 async def validar_producto(data: dict):
     """Valida la disponibilidad de un producto"""
@@ -157,10 +353,9 @@ async def obtener_pdf_categoria(anio: str, mes: str, categoria: str):
                 detail=f"PDF no encontrado para {categoria} en {mes}/{anio}"
             )
         
-        return FileResponse(
+        return InlinePDFResponse(
             ruta_pdf,
-            media_type="application/pdf",
-            filename=ruta_pdf.name
+            media_type="application/pdf"
         )
     
     except HTTPException:
@@ -217,10 +412,9 @@ async def obtener_pdf_categoria_activa(categoria: str):
                 detail=f"PDF no encontrado para {categoria}"
             )
         
-        return FileResponse(
+        return InlinePDFResponse(
             ruta_pdf,
-            media_type="application/pdf",
-            filename=ruta_pdf.name
+            media_type="application/pdf"
         )
     
     except HTTPException:
@@ -262,6 +456,45 @@ async def listar_pdfs_mes_activo():
             status_code=500,
             detail=f"Error al listar PDFs: {str(e)}"
         )
+
+@app.get("/imagen/{anio}/{mes}/{categoria}/{nombre_imagen}")
+async def obtener_imagen_categoria(anio: str, mes: str, categoria: str, nombre_imagen: str):
+    """Obtiene una imagen específica de una categoría"""
+    try:
+        # Mapear nombre de categoría a carpeta
+        categoria_upper = categoria.upper()
+        nombre_carpeta = None
+        for carpeta_key, cat_nombre in catalogo_mgr.categoria_map.items():
+            if cat_nombre == categoria_upper or carpeta_key.upper() == categoria_upper:
+                nombre_carpeta = carpeta_key
+                break
+        
+        if not nombre_carpeta:
+            raise HTTPException(
+                status_code=404,
+                detail=f"Categoría '{categoria}' no encontrada"
+            )
+        
+        # Construir ruta: imagenes/catalogos/{anio}/fnb/{mes}/{categoria}/listado o caracteristicas
+        # Detectar si es producto o característica por el nombre de la carpeta
+        rutas_posibles = [
+            Path(IMAGENES_DIR) / anio / "fnb" / mes / nombre_carpeta / "listado" / nombre_imagen,
+            Path(IMAGENES_DIR) / anio / "fnb" / mes / nombre_carpeta / "caracteristicas" / nombre_imagen,
+        ]
+        
+        for ruta_imagen in rutas_posibles:
+            if ruta_imagen.exists():
+                return FileResponse(ruta_imagen, media_type="image/png")
+        
+        raise HTTPException(
+            status_code=404, 
+            detail=f"Imagen no encontrada: {nombre_imagen}"
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error al obtener imagen: {str(e)}")
+
 
 @app.get("/ver/{nombre_archivo}")
 async def ver_imagen(nombre_archivo: str):
