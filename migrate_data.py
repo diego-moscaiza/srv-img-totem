@@ -2,7 +2,13 @@ import json
 import sys
 from pathlib import Path
 from database import SessionLocal, Producto
-from sqlalchemy.exc import IntegrityError
+
+try:
+    from sqlalchemy.exc import IntegrityError
+except ImportError:
+    # Fallback si sqlalchemy no está instalado
+    class IntegrityError(Exception):
+        pass
 
 def migrate_json_to_db():
     """
@@ -62,13 +68,12 @@ def migrate_json_to_db():
                         print(f"✅ Agregado: {prod.get('codigo')} - {prod.get('nombre')}")
                         products_added += 1
                         
-                    except IntegrityError:
+                    except (IntegrityError, Exception) as e:
                         db.rollback()
-                        print(f"⚠️  Duplicado (omitido): {prod.get('codigo')} - {prod.get('nombre')}")
-                        products_skipped += 1
-                    except Exception as e:
-                        db.rollback()
-                        print(f"❌ Error en {prod.get('codigo')}: {str(e)}")
+                        if isinstance(e, IntegrityError) or "unique" in str(e).lower():
+                            print(f"⚠️  Duplicado (omitido): {prod.get('codigo')} - {prod.get('nombre')}")
+                        else:
+                            print(f"❌ Error en {prod.get('codigo')}: {str(e)}")
                         products_skipped += 1
                         
             except json.JSONDecodeError:

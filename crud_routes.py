@@ -1,6 +1,5 @@
 from fastapi import APIRouter, HTTPException, Depends
 from fastapi.responses import HTMLResponse
-from sqlalchemy.orm import Session
 from database import Producto as DBProducto, SessionLocal
 from schemas import Producto, ProductoCreate, ProductoUpdate
 from typing import List
@@ -346,14 +345,14 @@ async def admin_panel():
 
 
 @router.get("/productos", response_model=List[Producto])
-async def listar_productos(db: Session = Depends(get_db)):
+async def listar_productos(db = Depends(get_db)):
     """Listar todos los productos"""
     productos = db.query(DBProducto).all()
     return productos
 
 
 @router.get("/productos/{producto_id}", response_model=Producto)
-async def obtener_producto_db(producto_id: int, db: Session = Depends(get_db)):
+async def obtener_producto_db(producto_id: int, db = Depends(get_db)):
     """Obtener un producto por ID"""
     producto = db.query(DBProducto).filter(DBProducto.id == producto_id).first()
     if not producto:
@@ -362,7 +361,7 @@ async def obtener_producto_db(producto_id: int, db: Session = Depends(get_db)):
 
 
 @router.post("/productos", response_model=Producto)
-async def crear_producto(producto: ProductoCreate, db: Session = Depends(get_db)):
+async def crear_producto(producto: ProductoCreate, db = Depends(get_db)):
     """Crear un nuevo producto"""
     db_producto = DBProducto(**producto.dict())
     db.add(db_producto)
@@ -372,7 +371,7 @@ async def crear_producto(producto: ProductoCreate, db: Session = Depends(get_db)
 
 
 @router.put("/productos/{producto_id}", response_model=Producto)
-async def actualizar_producto(producto_id: int, producto: ProductoUpdate, db: Session = Depends(get_db)):
+async def actualizar_producto(producto_id: int, producto: ProductoUpdate, db = Depends(get_db)):
     """Actualizar un producto"""
     db_producto = db.query(DBProducto).filter(DBProducto.id == producto_id).first()
     if not db_producto:
@@ -389,7 +388,7 @@ async def actualizar_producto(producto_id: int, producto: ProductoUpdate, db: Se
 
 
 @router.delete("/productos/{producto_id}")
-async def eliminar_producto(producto_id: int, db: Session = Depends(get_db)):
+async def eliminar_producto(producto_id: int, db = Depends(get_db)):
     """Eliminar un producto"""
     db_producto = db.query(DBProducto).filter(DBProducto.id == producto_id).first()
     if not db_producto:
