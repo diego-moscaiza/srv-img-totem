@@ -1,0 +1,25 @@
+[
+  {
+    "id": "01",
+    "codigo": "LAVLAV0034",
+    "nombre": "Lavadora MABE 10Kg",
+    "descripcion": "Lavadora 10Kg - LMAP10IOWBB0",
+    "garantia": "12 meses",
+    "precio": 1399.0,
+    "imagen": "catalogos/2025/fnb/noviembre/5-lavadoras/listado/01.png",
+    "imagen_caracteristicas": "catalogos/2025/fnb/noviembre/5-lavadoras/caracteristicas/01.png",
+    "cuotas": {
+      "3": 499.52,
+      "6": 263.69,
+      "9": 185.31,
+      "12": 146.3,
+      "18": 107.64,
+      "24": 88.67,
+      "36": 70.41,
+      "48": 62.01,
+      "60": 57.54
+    },
+    "categoria": "lavadoras",
+    "mes": "noviembre"
+  }
+]

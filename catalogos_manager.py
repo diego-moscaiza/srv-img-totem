@@ -79,41 +79,33 @@ class CatalogoManager:
         return catalogo
 
     def _cargar_catalogo_desde_json(self, año: str, mes: str) -> Dict:
-        """Carga productos reales desde los archivos JSON en la estructura de carpetas"""
+        """Carga productos reales desde los archivos JSON directos (1-celulares.json, etc.)"""
         catalogo = {}
 
-        # Ruta base donde están los productos.json
+        # Ruta base donde están los archivos JSON
         ruta_mes = self.base_dir / año / "fnb" / mes
 
         if not ruta_mes.exists():
             print(f"⚠️ Advertencia: No existe la ruta {ruta_mes}")
             return catalogo
 
-        # Recorrer cada carpeta de categoría (1-celulares, 2-laptops, etc.)
-        for carpeta in sorted(ruta_mes.iterdir()):
-            if not carpeta.is_dir():
+        # Recorrer cada archivo JSON de categoría (1-celulares.json, 2-laptops.json, etc.)
+        for archivo in sorted(ruta_mes.glob("*.json")):
+            if not archivo.is_file():
                 continue
 
-            nombre_carpeta = carpeta.name
+            nombre_archivo = archivo.stem  # Nombre sin extensión (ej: "1-celulares")
 
             # Obtener el nombre de categoría desde el mapeo
-            categoria_nombre = self.categoria_map.get(nombre_carpeta)
+            categoria_nombre = self.categoria_map.get(nombre_archivo)
 
             if not categoria_nombre:
-                print(f"⚠️ Carpeta no reconocida: {nombre_carpeta}")
-                continue
-
-            # Buscar productos.json en esta carpeta
-            archivo_productos = carpeta / "productos.json"
-
-            if not archivo_productos.exists():
-                print(f"⚠️ No existe productos.json en {carpeta}")
-                catalogo[categoria_nombre] = []
+                print(f"⚠️ Archivo no reconocido: {nombre_archivo}.json")
                 continue
 
             # Cargar y procesar el JSON
             try:
-                with open(archivo_productos, "r", encoding="utf-8") as f:
+                with open(archivo, "r", encoding="utf-8") as f:
                     productos = json.load(f)
 
                 # Procesar cada producto para agregar información de rutas
@@ -131,18 +123,18 @@ class CatalogoManager:
                         "mes_validez": f"{año}-{mes}",
                         "stock": True,  # Por defecto asumimos que tiene stock
                         # Construir rutas dinámicamente usando solo el nombre del archivo
-                        "ruta_imagen_relativa": f"catalogos/{año}/fnb/{mes}/{nombre_carpeta}/{nombre_imagen}",
-                        "ruta_imagen_absoluta": f"/static/catalogos/{año}/fnb/{mes}/{nombre_carpeta}/{nombre_imagen}",
+                        "ruta_imagen_relativa": f"catalogos/{año}/fnb/{mes}/{nombre_archivo}/{nombre_imagen}",
+                        "ruta_imagen_absoluta": f"/static/catalogos/{año}/fnb/{mes}/{nombre_archivo}/{nombre_imagen}",
                     }
                     productos_procesados.append(producto_enriquecido)
 
                 catalogo[categoria_nombre] = productos_procesados
 
             except json.JSONDecodeError as e:
-                print(f"❌ Error al parsear JSON en {archivo_productos}: {e}")
+                print(f"❌ Error al parsear JSON en {archivo}: {e}")
                 catalogo[categoria_nombre] = []
             except Exception as e:
-                print(f"❌ Error al cargar {archivo_productos}: {e}")
+                print(f"❌ Error al cargar {archivo}: {e}")
                 catalogo[categoria_nombre] = []
 
         return catalogo
@@ -214,21 +206,88 @@ class CatalogoManager:
         )
 
     def _contar_productos(self, ruta_mes: Path) -> int:
-        """Cuenta el total de productos en un mes"""
+        """Cuenta el total de productos en un mes desde archivos JSON directos"""
         total = 0
-        for carpeta in ruta_mes.iterdir():
-            if carpeta.is_dir():
-                archivo_productos = carpeta / "productos.json"
-                if archivo_productos.exists():
-                    try:
-                        with open(archivo_productos, "r", encoding="utf-8") as f:
-                            productos = json.load(f)
-                            total += (
-                                len(productos) if isinstance(productos, list) else 0
-                            )
-                    except:
-                        pass
+        for archivo in ruta_mes.glob("*.json"):
+            if archivo.is_file():
+                try:
+                    with open(archivo, "r", encoding="utf-8") as f:
+                        productos = json.load(f)
+                        total += len(productos) if isinstance(productos, list) else 0
+                except:
+                    pass
         return total
+
+    def obtener_pdf_categoria(self, año: str, mes: str, categoria: str) -> Optional[Path]:
+        """
+        Obtiene la ruta del PDF de una categoría específica
+        
+        Args:
+            año: Año del catálogo
+            mes: Mes del catálogo
+            categoria: Nombre o número de la categoría (ej: "CELULARES" o "1-celulares")
+        
+        Returns:
+            Path del PDF si existe, None si no lo encuentra
+        """
+        # Normalizar la entrada
+        categoria_upper = categoria.upper()
+        
+        # Buscar en el mapeo de categorías
+        nombre_carpeta = None
+        for carpeta_key, cat_nombre in self.categoria_map.items():
+            if cat_nombre == categoria_upper or carpeta_key == categoria or carpeta_key.upper() == categoria_upper:
+                nombre_carpeta = carpeta_key
+                break
+        
+        if not nombre_carpeta:
+            return None
+        
+        # Construir la ruta de la carpeta de la categoría
+        ruta_categoria = self.imagenes_base / año / "fnb" / mes / nombre_carpeta
+        
+        if not ruta_categoria.exists():
+            return None
+        
+        # Buscar archivos PDF en esa carpeta
+        pdfs = list(ruta_categoria.glob("*.pdf"))
+        
+        if pdfs:
+            return pdfs[0]  # Retornar el primer PDF encontrado
+        
+        return None
+
+    def listar_pdfs_mes(self, año: str, mes: str) -> Dict[str, Optional[str]]:
+        """
+        Lista todos los PDFs disponibles en un mes
+        
+        Args:
+            año: Año del catálogo
+            mes: Mes del catálogo
+        
+        Returns:
+            Diccionario con categorías y rutas relativas de sus PDFs
+        """
+        pdfs_disponibles = {}
+        
+        ruta_mes = self.imagenes_base / año / "fnb" / mes
+        
+        if not ruta_mes.exists():
+            return pdfs_disponibles
+        
+        for nombre_carpeta, categoria_nombre in sorted(self.categoria_map.items()):
+            ruta_categoria = ruta_mes / nombre_carpeta
+            
+            if ruta_categoria.exists():
+                pdfs = list(ruta_categoria.glob("*.pdf"))
+                if pdfs:
+                    # Obtener ruta relativa desde imagenes/
+                    ruta_relativa = pdfs[0].relative_to(self.imagenes_base)
+                    pdfs_disponibles[categoria_nombre] = str(ruta_relativa).replace("\\", "/")
+                else:
+                    pdfs_disponibles[categoria_nombre] = None
+        
+        return pdfs_disponibles
 
 
 # Instancia global
