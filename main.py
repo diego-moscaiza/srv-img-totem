@@ -1,10 +1,24 @@
 from fastapi import FastAPI, HTTPException
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi.responses import FileResponse, JSONResponse, HTMLResponse
 from fastapi.staticfiles import StaticFiles
 import os
 from pathlib import Path
 from typing import List, Dict
 import catalogos_manager
+from database import Producto as DBProducto, SessionLocal, engine
+from database import Base
+from schemas import Producto, ProductoCreate, ProductoUpdate
+from sqlalchemy.orm import Session
+
+# Crear las tablas de la BD
+Base.metadata.create_all(bind=engine)
+
+def get_db():
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
 
 app = FastAPI(
     title="Servidor de Imágenes para Catálogos Dinámicos",
@@ -21,13 +35,6 @@ class InlinePDFResponse(FileResponse):
     def __init__(self, path, **kwargs):
         super().__init__(path, **kwargs)
         self.headers["Content-Disposition"] = "inline"
-
-# Montar directorio estático
-app.mount("/static", StaticFiles(directory=IMAGENES_DIR), name="static")
-
-# Instancia del gestor de catálogos
-catalogo_mgr = catalogos_manager.catalogo_manager
-
 
 @app.get("/")
 async def root():
@@ -568,6 +575,11 @@ async def diagnostico():
         return diagnostico_info
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error en diagnóstico: {str(e)}")
+
+
+# Importar y registrar rutas CRUD
+from crud_routes import router as crud_router
+app.include_router(crud_router)
 
 
 if __name__ == "__main__":
