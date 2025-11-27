@@ -218,6 +218,77 @@ class CatalogoManager:
                     pass
         return total
 
+    def obtener_pdf_categoria(self, año: str, mes: str, categoria: str) -> Optional[Path]:
+        """
+        Obtiene la ruta del PDF de una categoría específica
+        
+        Args:
+            año: Año del catálogo
+            mes: Mes del catálogo
+            categoria: Nombre o número de la categoría (ej: "CELULARES" o "1-celulares")
+        
+        Returns:
+            Path del PDF si existe, None si no lo encuentra
+        """
+        # Normalizar la entrada
+        categoria_upper = categoria.upper()
+        
+        # Buscar en el mapeo de categorías
+        nombre_carpeta = None
+        for carpeta_key, cat_nombre in self.categoria_map.items():
+            if cat_nombre == categoria_upper or carpeta_key == categoria or carpeta_key.upper() == categoria_upper:
+                nombre_carpeta = carpeta_key
+                break
+        
+        if not nombre_carpeta:
+            return None
+        
+        # Construir la ruta de la carpeta de la categoría
+        ruta_categoria = self.imagenes_base / año / "fnb" / mes / nombre_carpeta
+        
+        if not ruta_categoria.exists():
+            return None
+        
+        # Buscar archivos PDF en esa carpeta
+        pdfs = list(ruta_categoria.glob("*.pdf"))
+        
+        if pdfs:
+            return pdfs[0]  # Retornar el primer PDF encontrado
+        
+        return None
+
+    def listar_pdfs_mes(self, año: str, mes: str) -> Dict[str, Optional[str]]:
+        """
+        Lista todos los PDFs disponibles en un mes
+        
+        Args:
+            año: Año del catálogo
+            mes: Mes del catálogo
+        
+        Returns:
+            Diccionario con categorías y rutas relativas de sus PDFs
+        """
+        pdfs_disponibles = {}
+        
+        ruta_mes = self.imagenes_base / año / "fnb" / mes
+        
+        if not ruta_mes.exists():
+            return pdfs_disponibles
+        
+        for nombre_carpeta, categoria_nombre in sorted(self.categoria_map.items()):
+            ruta_categoria = ruta_mes / nombre_carpeta
+            
+            if ruta_categoria.exists():
+                pdfs = list(ruta_categoria.glob("*.pdf"))
+                if pdfs:
+                    # Obtener ruta relativa desde imagenes/
+                    ruta_relativa = pdfs[0].relative_to(self.imagenes_base)
+                    pdfs_disponibles[categoria_nombre] = str(ruta_relativa).replace("\\", "/")
+                else:
+                    pdfs_disponibles[categoria_nombre] = None
+        
+        return pdfs_disponibles
+
 
 # Instancia global
 catalogo_manager = CatalogoManager()

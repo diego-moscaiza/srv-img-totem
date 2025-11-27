@@ -40,6 +40,12 @@ async def root():
                 "validar_producto": "/api/validar-producto",
                 "meses_disponibles": "/api/meses-disponibles",
             },
+            "pdfs": {
+                "pdf_categoria": "/api/pdf/{año}/{mes}/{categoria}",
+                "pdfs_mes": "/api/pdfs/{año}/{mes}",
+                "pdf_categoria_activo": "/api/pdf/activo/{categoria}",
+                "pdfs_mes_activo": "/api/pdfs/activo",
+            },
         },
     }
 
@@ -138,7 +144,125 @@ async def obtener_meses_disponibles():
         )
 
 
-# Endpoints para servir imágenes (versión mejorada)
+# Endpoints para servir PDFs existentes
+@app.get("/api/pdf/{anio}/{mes}/{categoria}")
+async def obtener_pdf_categoria(anio: str, mes: str, categoria: str):
+    """Obtiene el PDF de una categoría específica"""
+    try:
+        ruta_pdf = catalogo_mgr.obtener_pdf_categoria(anio, mes, categoria)
+        
+        if not ruta_pdf:
+            raise HTTPException(
+                status_code=404,
+                detail=f"PDF no encontrado para {categoria} en {mes}/{anio}"
+            )
+        
+        return FileResponse(
+            ruta_pdf,
+            media_type="application/pdf",
+            filename=ruta_pdf.name
+        )
+    
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error al obtener PDF: {str(e)}"
+        )
+
+
+@app.get("/api/pdfs/{anio}/{mes}")
+async def listar_pdfs_mes(anio: str, mes: str):
+    """Lista todos los PDFs disponibles en un mes"""
+    try:
+        pdfs = catalogo_mgr.listar_pdfs_mes(anio, mes)
+        
+        if not pdfs:
+            raise HTTPException(
+                status_code=404,
+                detail=f"No hay PDFs disponibles para {mes}/{anio}"
+            )
+        
+        return {
+            "año": anio,
+            "mes": mes,
+            "pdfs_disponibles": pdfs,
+            "total_pdfs": sum(1 for v in pdfs.values() if v is not None)
+        }
+    
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error al listar PDFs: {str(e)}"
+        )
+
+
+@app.get("/api/pdf/activo/{categoria}")
+async def obtener_pdf_categoria_activa(categoria: str):
+    """Obtiene el PDF de una categoría del catálogo activo (mes actual)"""
+    try:
+        catalogo_info = catalogo_mgr.detectar_catalogo_actual()
+        ruta_pdf = catalogo_mgr.obtener_pdf_categoria(
+            catalogo_info["año"],
+            catalogo_info["mes"],
+            categoria
+        )
+        
+        if not ruta_pdf:
+            raise HTTPException(
+                status_code=404,
+                detail=f"PDF no encontrado para {categoria}"
+            )
+        
+        return FileResponse(
+            ruta_pdf,
+            media_type="application/pdf",
+            filename=ruta_pdf.name
+        )
+    
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error al obtener PDF: {str(e)}"
+        )
+
+
+@app.get("/api/pdfs/activo")
+async def listar_pdfs_mes_activo():
+    """Lista todos los PDFs disponibles del catálogo activo (mes actual)"""
+    try:
+        catalogo_info = catalogo_mgr.detectar_catalogo_actual()
+        pdfs = catalogo_mgr.listar_pdfs_mes(
+            catalogo_info["año"],
+            catalogo_info["mes"]
+        )
+        
+        if not pdfs:
+            raise HTTPException(
+                status_code=404,
+                detail="No hay PDFs disponibles en el catálogo activo"
+            )
+        
+        return {
+            "año": catalogo_info["año"],
+            "mes": catalogo_info["mes"],
+            "pdfs_disponibles": pdfs,
+            "total_pdfs": sum(1 for v in pdfs.values() if v is not None)
+        }
+    
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error al listar PDFs: {str(e)}"
+        )
+
 @app.get("/ver/{nombre_archivo}")
 async def ver_imagen(nombre_archivo: str):
     """Muestra la imagen directamente en el navegador (busca en subdirectorios)"""
