@@ -1,10 +1,11 @@
 [
   {
-    "id": "COMLAP0050",
+    "id": "001",
+    "codigo": "COMLAP0050",
     "nombre": "LENOVO IDEAPAD SLIM 5i",
     "descripcion": "Intel Core i7",
     "precio": 4399.00,
-    "imagen": "01.png",
+    "imagen": "http://192.168.5.25:8000/static/catalogos/2025/fnb/noviembre/2-laptops/01.png",
     "cuotas": {
       "36": 221.41,
       "48": 194.98,
@@ -16,7 +17,7 @@
     "nombre": "Acer AL15-71P-53N7",
     "descripcion": "Intel Core i5",
     "precio": 2899.00,
-    "imagen": "02.png",
+    "imagen": "http://192.168.5.25:8000/static/catalogos/2025/fnb/noviembre/2-laptops/02.png",
     "cuotas": {
       "3": 1035.11,
       "6": 546.41,
