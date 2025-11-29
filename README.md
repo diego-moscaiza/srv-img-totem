@@ -1,4 +1,4 @@
-# 🎯 Servidor de Catálogos Dinámicos con FastAPI + PostgreSQL
+# 🎯 Servidor de Catálogos Dinámicos con FastAPI + SQLite
 
 Un servidor completo para gestionar catálogos de productos con imágenes, PDFs y panel administrativo web.
 
@@ -7,7 +7,7 @@ Un servidor completo para gestionar catálogos de productos con imágenes, PDFs 
 ✅ **Gestión de Catálogos** - Organización por año, mes y categoría
 ✅ **Servicio de Imágenes** - Listado y características de productos
 ✅ **Generación de PDFs** - Catálogos en PDF con formato automático
-✅ **Base de Datos PostgreSQL** - Almacenamiento persistente de productos
+✅ **Base de Datos SQLite** - Almacenamiento persistente sin servidor externo
 ✅ **Panel Admin Web** - Interfaz intuitiva para CRUD completo
 ✅ **API REST** - Endpoints para integración con otras aplicaciones
 ✅ **Búsqueda Flexible** - Soporta JSON estático o base de datos
@@ -15,7 +15,6 @@ Un servidor completo para gestionar catálogos de productos con imágenes, PDFs 
 ## 📦 Requisitos Previos
 
 - Python 3.8+
-- PostgreSQL 12+
 - pip
 
 ## 🚀 Instalación Rápida
@@ -26,14 +25,7 @@ Un servidor completo para gestionar catálogos de productos con imágenes, PDFs 
 pip install -r requirements.txt
 ```
 
-### 2. Configurar PostgreSQL
-
-Lee [POSTGRES_SETUP.md](./POSTGRES_SETUP.md) para:
-- Crear la base de datos
-- Crear el usuario
-- Actualizar las credenciales en `database.py`
-
-### 3. Ejecutar el Servidor
+### 2. Ejecutar el Servidor
 
 ```bash
 python main.py
@@ -44,7 +36,9 @@ Deberías ver:
 INFO:     Uvicorn running on http://0.0.0.0:8000
 ```
 
-### 4. Acceder a la Interfaz
+La base de datos SQLite se creará automáticamente en `catalogos.db`
+
+### 3. Acceder a la Interfaz
 
 - **Panel Admin**: http://localhost:8000/admin
 - **Documentación API**: http://localhost:8000/docs
@@ -71,12 +65,14 @@ srv-img-totem/
 │                       ├── listado/         # Fotos para listado
 │                       └── caracteristicas/ # Fotos detalladas
 │
-├── main.py                      # Servidor FastAPI (principal)
-├── database.py                  # Modelos SQLAlchemy para PostgreSQL
-├── schemas.py                   # Esquemas Pydantic para validación
-├── crud_routes.py               # Endpoints CRUD y panel admin
-├── catalogos_manager.py         # Cargador de catálogos JSON
-├── migrate_data.py              # Script para migrar JSON → PostgreSQL
+├── src/
+│   ├── main.py                  # Servidor FastAPI (principal)
+│   ├── database.py              # Modelos SQLAlchemy para SQLite
+│   ├── schemas.py               # Esquemas Pydantic para validación
+│   ├── crud_routes.py           # Endpoints CRUD y panel admin
+│   ├── catalogos_manager.py     # Cargador de catálogos JSON
+│   └── migrate_data.py          # Script para migrar JSON → SQLite
+├── catalogos.db                 # Base de datos SQLite (se crea automáticamente)
 ├── requirements.txt             # Dependencias Python
 ├── .env.example                 # Variables de entorno (ejemplo)
 └── README.md                    # Este archivo
@@ -86,49 +82,49 @@ srv-img-totem/
 
 ### 🎛️ Panel Administrativo
 
-| Método | Endpoint | Descripción |
-|--------|----------|-------------|
-| GET | `/admin` | Panel web para gestionar productos |
+| Método | Endpoint | Descripción                        |
+| ------ | -------- | ---------------------------------- |
+| GET    | `/admin` | Panel web para gestionar productos |
 
 ### 🗄️ API CRUD de Productos
 
-| Método | Endpoint | Descripción |
-|--------|----------|-------------|
-| GET | `/api/productos` | Listar todos los productos |
-| GET | `/api/productos/{id}` | Obtener producto por ID |
-| POST | `/api/productos` | Crear nuevo producto |
-| PUT | `/api/productos/{id}` | Actualizar producto |
-| DELETE | `/api/productos/{id}` | Eliminar producto |
+| Método | Endpoint              | Descripción                |
+| ------ | --------------------- | -------------------------- |
+| GET    | `/api/productos`      | Listar todos los productos |
+| GET    | `/api/productos/{id}` | Obtener producto por ID    |
+| POST   | `/api/productos`      | Crear nuevo producto       |
+| PUT    | `/api/productos/{id}` | Actualizar producto        |
+| DELETE | `/api/productos/{id}` | Eliminar producto          |
 
 ### 📚 Catálogos
 
-| Método | Endpoint | Descripción |
-|--------|----------|-------------|
-| GET | `/catalogo/{anio}/{mes}/{categoria}` | Obtener catálogo completo |
-| GET | `/catalogo/listado/{anio}/{mes}/{categoria}` | Obtener solo productos |
+| Método | Endpoint                                     | Descripción               |
+| ------ | -------------------------------------------- | ------------------------- |
+| GET    | `/catalogo/{anio}/{mes}/{categoria}`         | Obtener catálogo completo |
+| GET    | `/catalogo/listado/{anio}/{mes}/{categoria}` | Obtener solo productos    |
 
 ### 🖼️ Imágenes
 
-| Método | Endpoint | Descripción |
-|--------|----------|-------------|
-| GET | `/imagen/{anio}/{mes}/{categoria}/{nombre}` | Obtener imagen de producto |
-| GET | `/ver/{nombre_archivo}` | Ver imagen por nombre |
-| GET | `/ver-ruta/{ruta:path}` | Ver imagen por ruta |
-| GET | `/static/{ruta:path}` | Acceso directo a archivos estáticos |
+| Método | Endpoint                                    | Descripción                         |
+| ------ | ------------------------------------------- | ----------------------------------- |
+| GET    | `/imagen/{anio}/{mes}/{categoria}/{nombre}` | Obtener imagen de producto          |
+| GET    | `/ver/{nombre_archivo}`                     | Ver imagen por nombre               |
+| GET    | `/ver-ruta/{ruta:path}`                     | Ver imagen por ruta                 |
+| GET    | `/static/{ruta:path}`                       | Acceso directo a archivos estáticos |
 
 ### 📄 PDFs
 
-| Método | Endpoint | Descripción |
-|--------|----------|-------------|
-| GET | `/pdf/{anio}/{mes}/{categoria}` | Descargar catálogo PDF |
-| GET | `/ver-pdf/{anio}/{mes}/{categoria}` | Ver PDF en navegador |
+| Método | Endpoint                            | Descripción            |
+| ------ | ----------------------------------- | ---------------------- |
+| GET    | `/pdf/{anio}/{mes}/{categoria}`     | Descargar catálogo PDF |
+| GET    | `/ver-pdf/{anio}/{mes}/{categoria}` | Ver PDF en navegador   |
 
 ### 🔧 Sistema
 
-| Método | Endpoint | Descripción |
-|--------|----------|-------------|
-| GET | `/` | Información general del servidor |
-| GET | `/diagnostico` | Diagnóstico del servidor |
+| Método | Endpoint       | Descripción                      |
+| ------ | -------------- | -------------------------------- |
+| GET    | `/`            | Información general del servidor |
+| GET    | `/diagnostico` | Diagnóstico del servidor         |
 
 ## 💾 Modelos de Base de Datos
 
