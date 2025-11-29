@@ -25,84 +25,265 @@ async def admin_panel():
         <title>Admin - Gestión de Productos</title>
         <style>
             * { margin: 0; padding: 0; box-sizing: border-box; }
-            body { font-family: Arial, sans-serif; background: #f5f5f5; }
-            .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
-            h1 { color: #333; margin-bottom: 30px; text-align: center; }
-            
+            body {
+                font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+                background: #f6f7fb;
+                min-height: 100vh;
+                padding: 20px;
+            }
+            .container {
+                max-width: 1300px;
+                margin: 0 auto;
+                background: #fff;
+                border-radius: 20px;
+                box-shadow: 0 8px 32px rgba(60, 72, 88, 0.12);
+                overflow: hidden;
+            }
+            /* Header */
+            .header {
+                background: #f6f7fb;
+                color: #2d2d2d;
+                padding: 40px 30px;
+                text-align: center;
+                border-bottom: 1px solid #e0e0e0;
+            }
+            .header h1 { font-size: 2.5em; font-weight: 600; margin-bottom: 10px; }
+            .header p { opacity: 0.8; font-size: 1.1em; }
+            /* Contenido */
+            .content { padding: 30px; }
             /* Navegación */
-            .nav { display: flex; gap: 10px; margin-bottom: 30px; border-bottom: 2px solid #ddd; }
-            .nav button { 
-                background: #f0f0f0; 
-                border: none; 
-                padding: 15px 25px; 
-                cursor: pointer; 
+            .nav {
+                display: flex;
+                gap: 0;
+                margin-bottom: 30px;
+                background: #f3f4f8;
+                border-radius: 12px;
+                padding: 5px;
+                border: 1px solid #e0e0e0;
+            }
+            .nav button {
+                flex: 1;
+                background: transparent;
+                border: none;
+                padding: 15px 25px;
+                cursor: pointer;
                 font-size: 16px;
-                font-weight: 500;
-                color: #555;
-                transition: all 0.3s;
-                border-bottom: 3px solid transparent;
+                font-weight: 600;
+                color: #444;
+                transition: all 0.3s ease;
+                border-radius: 8px;
             }
-            .nav button:hover { background: #e0e0e0; }
-            .nav button.active { 
-                background: #007bff; 
-                color: white; 
-                border-bottom: 3px solid #0056b3;
+            .nav button:hover {
+                background: #e6eaff;
+                color: #2d5be3;
             }
-            
+            .nav button.active {
+                background: #2d5be3;
+                color: #fff;
+                box-shadow: 0 2px 8px rgba(45, 91, 227, 0.10);
+            }
             /* Secciones */
-            .section { 
-                display: none; 
-                background: white; 
-                padding: 30px; 
-                border-radius: 8px; 
-                box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-                animation: fadeIn 0.3s;
+            .section {
+                display: none;
+                animation: fadeIn 0.4s ease;
             }
             .section.active { display: block; }
-            
             @keyframes fadeIn {
-                from { opacity: 0; transform: translateY(10px); }
+                from { opacity: 0; transform: translateY(15px); }
                 to { opacity: 1; transform: translateY(0); }
             }
-            
-            h2 { color: #333; margin-bottom: 20px; }
-            .form-group { margin-bottom: 15px; }
-            label { display: block; margin-bottom: 5px; color: #333; font-weight: bold; }
-            input, textarea, select { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px; }
-            textarea { resize: vertical; min-height: 80px; }
-            button { background: #007bff; color: white; padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer; font-size: 14px; margin-right: 5px; }
-            button:hover { background: #0056b3; }
-            button.danger { background: #dc3545; }
-            button.danger:hover { background: #c82333; }
-            .grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; }
-            
+            h2 {
+                color: #2d5be3;
+                margin-bottom: 25px;
+                font-size: 1.8em;
+                font-weight: 600;
+                border-bottom: 2px solid #e0e0e0;
+                padding-bottom: 15px;
+            }
+            .form-group {
+                margin-bottom: 18px;
+            }
+            label {
+                display: block;
+                margin-bottom: 8px;
+                color: #222;
+                font-weight: 600;
+                font-size: 0.95em;
+            }
+            input, textarea, select {
+                width: 100%;
+                padding: 12px 15px;
+                border: 2px solid #e0e0e0;
+                border-radius: 8px;
+                font-size: 14px;
+                transition: all 0.3s ease;
+                font-family: inherit;
+                background: #f9fafd;
+            }
+            input:focus, textarea:focus, select:focus {
+                outline: none;
+                border-color: #2d5be3;
+                box-shadow: 0 0 0 2px #e6eaff;
+                background: #fff;
+            }
+            textarea {
+                resize: vertical;
+                min-height: 100px;
+            }
+            .grid {
+                display: grid;
+                grid-template-columns: repeat(2, 1fr);
+                gap: 20px;
+            }
+            /* Botones */
+            .btn-group {
+                display: flex;
+                gap: 10px;
+                margin-top: 25px;
+            }
+            button {
+                background: #2d5be3;
+                color: #fff;
+                padding: 12px 28px;
+                border: none;
+                border-radius: 8px;
+                cursor: pointer;
+                font-size: 15px;
+                font-weight: 600;
+                transition: all 0.3s ease;
+                box-shadow: 0 2px 8px rgba(45, 91, 227, 0.10);
+            }
+            button:hover {
+                background: #1a3e8a;
+                box-shadow: 0 4px 16px rgba(45, 91, 227, 0.13);
+            }
+            button:active { transform: translateY(0); }
+            button.danger {
+                background: #f5576c;
+                box-shadow: 0 2px 8px rgba(245, 87, 108, 0.10);
+            }
+            button.danger:hover {
+                background: #c82333;
+                box-shadow: 0 4px 16px rgba(245, 87, 108, 0.13);
+            }
             /* Tabla */
-            table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-            th, td { padding: 12px; text-align: left; border-bottom: 1px solid #ddd; }
-            th { background: #f8f9fa; font-weight: bold; color: #333; }
-            tr:hover { background: #f9f9f9; }
-            .actions { white-space: nowrap; }
-            .actions button { margin-right: 5px; padding: 5px 10px; font-size: 12px; margin-bottom: 0; }
-            
+            .table-wrapper {
+                overflow-x: auto;
+                border-radius: 12px;
+                border: 1px solid #e0e0e0;
+                background: #fff;
+            }
+            table {
+                width: 100%;
+                border-collapse: collapse;
+                margin-top: 20px;
+            }
+            th, td {
+                padding: 15px;
+                text-align: left;
+                border-bottom: 1px solid #e0e0e0;
+            }
+            th {
+                background: #f3f4f8;
+                color: #2d5be3;
+                font-weight: 600;
+                font-size: 0.95em;
+            }
+            tr:hover {
+                background: #f6f7fb;
+            }
+            .actions {
+                white-space: nowrap;
+                display: flex;
+                gap: 8px;
+            }
+            .actions button {
+                margin-right: 0;
+                padding: 8px 12px;
+                font-size: 12px;
+            }
             /* Alertas */
-            .alert { padding: 15px; margin-bottom: 20px; border-radius: 4px; display: none; border-left: 4px solid; }
+            .alert {
+                padding: 15px 20px;
+                margin-bottom: 20px;
+                border-radius: 8px;
+                display: none;
+                border-left: 4px solid;
+                animation: slideDown 0.3s ease;
+            }
             .alert.show { display: block; }
-            .alert-success { background: #d4edda; color: #155724; border-left-color: #28a745; }
-            .alert-error { background: #f8d7da; color: #721c24; border-left-color: #dc3545; }
-            
+            @keyframes slideDown {
+                from { opacity: 0; transform: translateY(-10px); }
+                to { opacity: 1; transform: translateY(0); }
+            }
+            .alert-success {
+                background: #eafaf1;
+                color: #1e5d1e;
+                border-left-color: #28a745;
+            }
+            .alert-error {
+                background: #fce7e7;
+                color: #721c24;
+                border-left-color: #f5576c;
+            }
             /* Modal */
-            .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); overflow-y: auto; }
+            .modal {
+                display: none;
+                position: fixed;
+                z-index: 1000;
+                left: 0;
+                top: 0;
+                width: 100%;
+                height: 100%;
+                background: rgba(0,0,0,0.12);
+                overflow-y: auto;
+                backdrop-filter: blur(2px);
+            }
             .modal.show { display: block; }
-            .modal-content { background: white; margin: 5% auto; padding: 30px; border-radius: 8px; width: 90%; max-width: 600px; }
-            .close { color: #aaa; float: right; font-size: 28px; font-weight: bold; cursor: pointer; }
-            .close:hover { color: #000; }
-            
-            .reload-btn { margin-bottom: 15px; }
+            .modal-content {
+                background: #fff;
+                margin: 5% auto;
+                padding: 35px;
+                border-radius: 15px;
+                width: 90%;
+                max-width: 650px;
+                box-shadow: 0 8px 32px rgba(60, 72, 88, 0.12);
+                animation: modalSlide 0.3s ease;
+            }
+            @keyframes modalSlide {
+                from { transform: translateY(-50px); opacity: 0; }
+                to { transform: translateY(0); opacity: 1; }
+            }
+            .close {
+                color: #999;
+                float: right;
+                font-size: 28px;
+                font-weight: bold;
+                cursor: pointer;
+                transition: color 0.3s;
+            }
+            .close:hover {
+                color: #2d5be3;
+            }
+            .reload-btn {
+                margin-bottom: 15px;
+            }
+            .empty-state {
+                text-align: center;
+                padding: 40px;
+                color: #999;
+            }
+            .empty-state p { font-size: 1.1em; }
         </style>
     </head>
     <body>
         <div class="container">
-            <h1>🛠️ Panel de Administración de Productos</h1>
+            <div class="header">
+                <h1>🛠️ Panel de Administración</h1>
+                <p>Gestión moderna de productos y catálogos</p>
+            </div>
+            
+            <div class="content">
             
             <div id="alertContainer"></div>
             
@@ -114,7 +295,7 @@ async def admin_panel():
             
             <!-- Sección: Crear Producto -->
             <div id="crear" class="section active">
-                <h2>Crear Nuevo Producto</h2>
+                <h2>➕ Crear Nuevo Producto</h2>
                 <form id="crearForm">
                     <div class="grid">
                         <div class="form-group">
@@ -145,6 +326,28 @@ async def admin_panel():
                             </select>
                         </div>
                         <div class="form-group">
+                            <label>Segmento *</label>
+                            <select name="segmento" required>
+                                <option value="fnb">FNB</option>
+                                <option value="gaso">GASO</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Estado *</label>
+                            <select name="estado" required>
+                                <option value="disponible">Disponible</option>
+                                <option value="no disponible">No Disponible</option>
+                                <option value="agotado">Agotado</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Stock</label>
+                            <select name="stock">
+                                <option value="true">Sí</option>
+                                <option value="false">No</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
                             <label>Imagen Listado</label>
                             <input type="text" name="imagen_listado" placeholder="catalogos/2025/fnb/noviembre/1-celulares/listado/01.png">
                         </div>
@@ -165,29 +368,35 @@ async def admin_panel():
                             <textarea name="cuotas" required placeholder='{"3": 338.85, "6": 178.87, "9": 125.7, "12": 99.24}'></textarea>
                         </div>
                     </div>
-                    <button type="submit" style="margin-top: 15px;">✅ Crear Producto</button>
+                    <div class="btn-group">
+                        <button type="submit">✅ Crear Producto</button>
+                    </div>
                 </form>
             </div>
             
             <!-- Sección: Productos Registrados -->
             <div id="listar" class="section">
-                <h2>Productos Registrados</h2>
+                <h2>📋 Productos Registrados</h2>
                 <button class="reload-btn" onclick="cargarProductos()">🔄 Recargar</button>
-                <table id="productosTable">
-                    <thead>
-                        <tr>
-                            <th>ID</th>
-                            <th>Código</th>
-                            <th>Nombre</th>
-                            <th>Precio</th>
-                            <th>Categoría</th>
-                            <th>Mes</th>
-                            <th>Acciones</th>
-                        </tr>
-                    </thead>
-                    <tbody id="productosBody">
-                    </tbody>
-                </table>
+                <div class="table-wrapper">
+                    <table id="productosTable">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Código</th>
+                                <th>Nombre</th>
+                                <th>Precio</th>
+                                <th>Categoría</th>
+                                <th>Segmento</th>
+                                <th>Estado</th>
+                                <th>Mes</th>
+                                <th>Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody id="productosBody">
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </div>
 
@@ -198,7 +407,9 @@ async def admin_panel():
                 <h2>✏️ Editar Producto</h2>
                 <form id="editForm">
                     <div class="grid" id="editFormFields"></div>
-                    <button type="submit" style="margin-top: 15px;">💾 Guardar Cambios</button>
+                    <div class="btn-group">
+                        <button type="submit">💾 Guardar Cambios</button>
+                    </div>
                 </form>
             </div>
         </div>
@@ -213,12 +424,24 @@ async def admin_panel():
                 document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.remove('active'));
                 
                 // Mostrar la sección seleccionada
-                document.getElementById(seccion).classList.add('active');
-                event.target.classList.add('active');
+                const sectionEl = document.getElementById(seccion);
+                if (sectionEl) {
+                    sectionEl.classList.add('active');
+                }
+                
+                // Activar el botón correspondiente
+                const botones = document.querySelectorAll('.nav-btn');
+                botones.forEach((btn, idx) => {
+                    if ((seccion === 'crear' && idx === 0) || (seccion === 'listar' && idx === 1)) {
+                        btn.classList.add('active');
+                    }
+                });
                 
                 // Si es listar, cargar productos
                 if (seccion === 'listar') {
-                    cargarProductos();
+                    setTimeout(() => {
+                        cargarProductos();
+                    }, 100);
                 }
             }
 
@@ -248,7 +471,9 @@ async def admin_panel():
                         cuotas: cuotas,
                         mes: formData.get('mes'),
                         ano: parseInt(formData.get('ano')),
-                        stock: true
+                        segmento: formData.get('segmento'),
+                        estado: formData.get('estado'),
+                        stock: formData.get('stock') === 'true'
                     };
 
                     const response = await fetch('/api/productos', {
@@ -275,63 +500,84 @@ async def admin_panel():
             async function cargarProductos() {
                 try {
                     const response = await fetch('/api/productos');
+                    if (!response.ok) {
+                        mostrarAlerta('❌ Error al obtener productos del servidor', 'error');
+                        return;
+                    }
                     const productos = await response.json();
                     
                     const tbody = document.getElementById('productosBody');
                     tbody.innerHTML = '';
                     
-                    if (productos.length === 0) {
-                        tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; color: #999;">No hay productos registrados</td></tr>';
+                    if (!productos || productos.length === 0) {
+                        tbody.innerHTML = '<tr><td colspan="9" style="text-align: center; padding: 40px; color: #999;"><div class="empty-state"><p>📭 No hay productos registrados</p></div></td></tr>';
                         return;
                     }
                     
                     productos.forEach(p => {
-                        const row = `
-                            <tr>
-                                <td>${p.id}</td>
-                                <td><strong>${p.codigo}</strong></td>
-                                <td>${p.nombre}</td>
-                                <td>S/. ${p.precio.toFixed(2)}</td>
-                                <td>${p.categoria}</td>
-                                <td>${p.mes}</td>
-                                <td class="actions">
-                                    <button onclick="abrirEditModal(${p.id})">✏️ Editar</button>
-                                    <button class="danger" onclick="eliminarProducto(${p.id})">🗑️ Eliminar</button>
-                                </td>
-                            </tr>
-                        `;
-                        tbody.innerHTML += row;
+                        try {
+                            const estadoColor = p.estado === 'disponible' ? '#d4edda' : '#fce7e7';
+                            const estadoTextColor = p.estado === 'disponible' ? '#1e5d1e' : '#721c24';
+                            const segmentoColor = p.segmento === 'fnb' ? '#cfe2ff' : '#fff3cd';
+                            const segmentoTextColor = p.segmento === 'fnb' ? '#084298' : '#664d03';
+                            
+                            const estadoBadge = '<span style="background: ' + estadoColor + '; color: ' + estadoTextColor + '; padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: 600;">' + (p.estado || 'N/A') + '</span>';
+                            const segmentoBadge = '<span style="background: ' + segmentoColor + '; color: ' + segmentoTextColor + '; padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: 600;">' + (p.segmento ? p.segmento.toUpperCase() : 'N/A') + '</span>';
+                            
+                            const row = '<tr>' +
+                                '<td><strong>#' + (p.id || '') + '</strong></td>' +
+                                '<td><strong>' + (p.codigo || '') + '</strong></td>' +
+                                '<td>' + (p.nombre || '') + '</td>' +
+                                '<td>S/. ' + (p.precio ? p.precio.toFixed(2) : '0.00') + '</td>' +
+                                '<td>' + (p.categoria || '') + '</td>' +
+                                '<td>' + segmentoBadge + '</td>' +
+                                '<td>' + estadoBadge + '</td>' +
+                                '<td>' + (p.mes || '') + '</td>' +
+                                '<td class="actions">' +
+                                '<button onclick="abrirEditModal(' + p.id + ')">✏️ Editar</button>' +
+                                '<button class="danger" onclick="eliminarProducto(' + p.id + ')">🗑️ Eliminar</button>' +
+                                '</td>' +
+                                '</tr>';
+                            tbody.innerHTML += row;
+                        } catch(rowError) {
+                            console.error('Error al procesar producto:', p, rowError);
+                        }
                     });
                 } catch(e) {
+                    console.error('Error completo:', e);
                     mostrarAlerta('❌ Error al cargar productos: ' + e.message, 'error');
                 }
             }
 
             async function abrirEditModal(id) {
                 try {
-                    const response = await fetch(`/api/productos/${id}`);
+                    const response = await fetch('/api/productos/' + id);
                     const producto = await response.json();
                     productoEnEdicion = producto;
                     
                     let formHtml = '';
-                    const campos = ['codigo', 'nombre', 'descripcion', 'precio', 'categoria', 'imagen_listado', 'imagen_caracteristicas', 'mes', 'ano'];
+                    const campos = ['codigo', 'nombre', 'descripcion', 'precio', 'categoria', 'segmento', 'estado', 'imagen_listado', 'imagen_caracteristicas', 'mes', 'ano'];
                     
                     campos.forEach((key, idx) => {
                         const value = producto[key];
                         const gridSpan = (key === 'descripcion' || key === 'imagen_listado' || key === 'imagen_caracteristicas') ? ' style="grid-column: 1/-1;"' : '';
                         
                         if (key === 'descripcion' || key === 'imagen_listado' || key === 'imagen_caracteristicas') {
-                            formHtml += `<div class="form-group"${gridSpan}><label>${key}</label><textarea name="${key}">${value}</textarea></div>`;
+                            formHtml += '<div class="form-group"' + gridSpan + '><label>' + key + '</label><textarea name="' + key + '">' + (value || '') + '</textarea></div>';
                         } else if (key === 'categoria') {
-                            formHtml += `<div class="form-group"><label>${key}</label><select name="${key}"><option>${value}</option><option>celulares</option><option>laptops</option><option>televisores</option><option>refrigeradoras</option><option>lavadoras</option></select></div>`;
+                            formHtml += '<div class="form-group"><label>' + key + '</label><select name="' + key + '"><option>' + value + '</option><option>celulares</option><option>laptops</option><option>televisores</option><option>refrigeradoras</option><option>lavadoras</option></select></div>';
+                        } else if (key === 'segmento') {
+                            formHtml += '<div class="form-group"><label>' + key + '</label><select name="' + key + '"><option value="fnb" ' + (value === 'fnb' ? 'selected' : '') + '>FNB</option><option value="gaso" ' + (value === 'gaso' ? 'selected' : '') + '>GASO</option></select></div>';
+                        } else if (key === 'estado') {
+                            formHtml += '<div class="form-group"><label>' + key + '</label><select name="' + key + '"><option value="disponible" ' + (value === 'disponible' ? 'selected' : '') + '>Disponible</option><option value="no disponible" ' + (value === 'no disponible' ? 'selected' : '') + '>No Disponible</option><option value="agotado" ' + (value === 'agotado' ? 'selected' : '') + '>Agotado</option></select></div>';
                         } else {
                             const type = key === 'precio' || key === 'ano' ? 'number' : 'text';
                             const step = key === 'precio' ? ' step="0.01"' : '';
-                            formHtml += `<div class="form-group"><label>${key}</label><input type="${type}" name="${key}" value="${value}"${step}></div>`;
+                            formHtml += '<div class="form-group"><label>' + key + '</label><input type="' + type + '" name="' + key + '" value="' + value + '"' + step + '></div>';
                         }
                     });
                     
-                    formHtml += `<div class="form-group" style="grid-column: 1/-1;"><label>cuotas (JSON)</label><textarea name="cuotas">${JSON.stringify(producto.cuotas)}</textarea></div>`;
+                    formHtml += '<div class="form-group" style="grid-column: 1/-1;"><label>cuotas (JSON)</label><textarea name="cuotas">' + JSON.stringify(producto.cuotas) + '</textarea></div>';
                     
                     document.getElementById('editFormFields').innerHTML = formHtml;
                     document.getElementById('editModal').classList.add('show');
@@ -359,10 +605,12 @@ async def admin_panel():
                         imagen_caracteristicas: formData.get('imagen_caracteristicas'),
                         cuotas: cuotas,
                         mes: formData.get('mes'),
-                        ano: parseInt(formData.get('ano'))
+                        ano: parseInt(formData.get('ano')),
+                        segmento: formData.get('segmento'),
+                        estado: formData.get('estado')
                     };
 
-                    const response = await fetch(`/api/productos/${productoEnEdicion.id}`, {
+                    const response = await fetch('/api/productos/' + productoEnEdicion.id, {
                         method: 'PUT',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify(data)
@@ -385,7 +633,7 @@ async def admin_panel():
                 if (!confirm('⚠️ ¿Estás seguro de que deseas eliminar este producto?')) return;
                 
                 try {
-                    const response = await fetch(`/api/productos/${id}`, {
+                    const response = await fetch('/api/productos/' + id, {
                         method: 'DELETE'
                     });
 
@@ -404,7 +652,7 @@ async def admin_panel():
             function mostrarAlerta(mensaje, tipo) {
                 const container = document.getElementById('alertContainer');
                 const alert = document.createElement('div');
-                alert.className = `alert alert-${tipo} show`;
+                alert.className = 'alert alert-' + tipo + ' show';
                 alert.textContent = mensaje;
                 container.appendChild(alert);
                 setTimeout(() => alert.remove(), 4000);
@@ -418,16 +666,33 @@ async def admin_panel():
 @router.get("/productos", response_model=List[Producto])
 async def listar_productos(db=Depends(get_db)):
     """Listar todos los productos"""
+    import json
+
     productos = db.query(DBProducto).all()
+    # Convertir cuotas de string a dict si es necesario
+    for p in productos:
+        if isinstance(p.cuotas, str):
+            try:
+                p.cuotas = json.loads(p.cuotas)
+            except:
+                p.cuotas = {}
     return productos
 
 
 @router.get("/productos/{producto_id}", response_model=Producto)
 async def obtener_producto_db(producto_id: int, db=Depends(get_db)):
     """Obtener un producto por ID"""
+    import json
+
     producto = db.query(DBProducto).filter(DBProducto.id == producto_id).first()
     if not producto:
         raise HTTPException(status_code=404, detail="Producto no encontrado")
+    # Convertir cuotas de string a dict si es necesario
+    if isinstance(producto.cuotas, str):
+        try:
+            producto.cuotas = json.loads(producto.cuotas)
+        except:
+            producto.cuotas = {}
     return producto
 
 
