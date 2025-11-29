@@ -1,6 +1,7 @@
 from pydantic import BaseModel
 from typing import Optional, Dict, Any
 
+
 class ProductoBase(BaseModel):
     codigo: str
     nombre: str
@@ -12,6 +13,8 @@ class ProductoBase(BaseModel):
     cuotas: Dict[str, float]
     mes: str
     ano: int
+    segmento: str = "fnb"
+    estado: str = "disponible"
     stock: bool = True
 
 
@@ -30,6 +33,8 @@ class ProductoUpdate(BaseModel):
     cuotas: Optional[Dict[str, float]] = None
     mes: Optional[str] = None
     ano: Optional[int] = None
+    segmento: Optional[str] = None
+    estado: Optional[str] = None
     stock: Optional[bool] = None
 
 
