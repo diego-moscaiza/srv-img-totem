@@ -44,34 +44,38 @@ class InlinePDFResponse(FileResponse):
 
 @app.get("/")
 async def root():
+    segmentos = catalogo_mgr.obtener_segmentos_disponibles()
     return {
         "message": "Servidor de catálogos dinámicos funcionando",
         "admin": "/admin",
         "docs": "/docs",
+        "segmentos_disponibles": segmentos,
         "endpoints": {
-            "imagenes": {
-                "imagen_categoria": "/imagen/{anio}/{mes}/{categoria}/{nombre_imagen}",
-                "ver_imagen": "/ver/{nombre_archivo}",
-                "ver_con_ruta": "/ver-ruta/{ruta:path}",
-                "acceso_directo": "/static/{ruta:path}",
+            "segmentos": {
+                "listar_segmentos": "/api/segmentos",
             },
             "catalogos": {
-                "catalogo_activo": "/api/catalogo/activo",
-                "catalogo_mes": "/api/catalogos/{año}/{mes}",
-                "categorias": "/api/categorias/{año}/{mes}",
-                "validar_producto": "/api/validar-producto",
+                "catalogo_activo": "/api/catalogo/{segmento}/activo",
+                "catalogo_mes": "/api/catalogo/{segmento}/{año}/{mes}",
+                "categorias": "/api/catalogo/{segmento}/{año}/{mes}/{categoria}",
                 "meses_disponibles": "/api/meses-disponibles",
             },
             "productos": {
-                "producto_detallado": "/api/producto/{año}/{mes}/{categoria}/{producto_id}",
-                "imagen_caracteristicas": "/api/producto/caracteristicas/{año}/{mes}/{categoria}/{producto_id}",
-                "imagen_productos": "/api/producto/listado/{año}/{mes}/{categoria}/{producto_id}",
+                "producto_detallado": "/api/catalogo/{segmento}/{año}/{mes}/{categoria}/{producto_id}",
+                "imagen_caracteristicas": "/api/imagen/{segmento}/{año}/{mes}/{categoria}/{producto_id}/caracteristicas",
+                "imagen_listado": "/api/imagen/{segmento}/{año}/{mes}/{categoria}/{producto_id}/listado",
             },
             "pdfs": {
-                "pdf_categoria": "/api/pdf/{año}/{mes}/{categoria}",
-                "pdfs_mes": "/api/pdfs/{año}/{mes}",
-                "pdf_categoria_activo": "/api/pdf/activo/{categoria}",
-                "pdfs_mes_activo": "/api/pdfs/activo",
+                "pdf_categoria": "/api/pdf/{segmento}/{año}/{mes}/{categoria}",
+                "pdfs_mes": "/api/pdfs/{segmento}/{año}/{mes}",
+                "pdf_categoria_activo": "/api/pdf/{segmento}/activo/{categoria}",
+                "pdfs_mes_activo": "/api/pdfs/{segmento}/activo",
+            },
+            "ejemplos": {
+                "catalogo_fnb_activo": "/api/catalogo/fnb/activo",
+                "catalogo_gaso_noviembre_2025": "/api/catalogo/gaso/2025/noviembre",
+                "celulares_gaso": "/api/catalogo/gaso/2025/noviembre/celulares",
+                "producto_especifico": "/api/catalogo/fnb/2025/noviembre/celulares/CELCEL0091",
             },
         },
     }
@@ -83,16 +87,40 @@ async def admin_redirect():
     return RedirectResponse(url="/api/admin")
 
 
-@app.get("/api/catalogo/activo")
-async def obtener_catalogo_activo():
-    """Obtiene el catálogo del mes actual"""
+@app.get("/api/segmentos")
+async def obtener_segmentos():
+    """Obtiene lista de segmentos disponibles"""
     try:
-        catalogo_info = catalogo_mgr.detectar_catalogo_actual()
+        segmentos = catalogo_mgr.obtener_segmentos_disponibles()
+        return {
+            "segmentos": segmentos,
+            "total_segmentos": len(segmentos),
+            "descripcion": "Segmentos de negocio disponibles para consultar catálogos",
+            "ejemplo_uso": "/api/catalogo/activo?segmento=fnb",
+        }
+    except Exception as e:
+        raise HTTPException(
+            status_code=500, detail=f"Error al obtener segmentos: {str(e)}"
+        )
+
+
+@app.get("/admin", response_class=HTMLResponse)
+async def admin_redirect():
+    """Redirección al panel de admin"""
+    return RedirectResponse(url="/api/admin")
+
+
+@app.get("/api/catalogo/{segmento}/activo")
+async def obtener_catalogo_activo(segmento: str):
+    """Obtiene el catálogo activo de un segmento"""
+    try:
+        catalogo_info = catalogo_mgr.detectar_catalogo_actual(segmento)
         catalogo = catalogo_mgr.cargar_catalogo_mes(
-            catalogo_info["año"], catalogo_info["mes"]
+            catalogo_info["año"], catalogo_info["mes"], segmento
         )
 
         return {
+            "segmento": segmento,
             "catalogo_info": catalogo_info,
             "productos_por_categoria": {
                 cat: len(prods) for cat, prods in catalogo.items()
@@ -105,12 +133,13 @@ async def obtener_catalogo_activo():
         )
 
 
-@app.get("/api/catalogos/{anio}/{mes}")
-async def obtener_catalogo_mes(anio: str, mes: str):
-    """Obtiene catálogo de un mes específico"""
+@app.get("/api/catalogo/{segmento}/{anio}/{mes}")
+async def obtener_catalogo_mes(segmento: str, anio: str, mes: str):
+    """Obtiene catálogo de un mes específico de un segmento"""
     try:
-        catalogo = catalogo_mgr.cargar_catalogo_mes(anio, mes)
+        catalogo = catalogo_mgr.cargar_catalogo_mes(anio, mes, segmento)
         return {
+            "segmento": segmento,
             "anio": anio,
             "mes": mes,
             "catalogo": catalogo,
@@ -120,38 +149,52 @@ async def obtener_catalogo_mes(anio: str, mes: str):
         raise HTTPException(status_code=404, detail=f"Catálogo no encontrado: {str(e)}")
 
 
-@app.get("/api/categorias/{anio}/{mes}")
-async def obtener_categorias_mes(anio: str, mes: str):
-    """Obtiene categorías disponibles en un mes"""
+@app.get("/api/catalogo/{segmento}/{anio}/{mes}/{categoria}")
+async def obtener_categorias_mes(segmento: str, anio: str, mes: str, categoria: str):
+    """Obtiene productos de una categoría específica"""
     try:
-        catalogo = catalogo_mgr.cargar_catalogo_mes(anio, mes)
+        catalogo = catalogo_mgr.cargar_catalogo_mes(anio, mes, segmento)
 
-        categorias = []
-        for categoria, productos in catalogo.items():
-            categorias.append(
-                {
-                    "nombre": categoria,
-                    "total_productos": len(productos),
-                    "productos": [
-                        {"id": p["id"], "nombre": p["nombre"]} for p in productos
-                    ],
-                }
+        # Buscar la categoría
+        categoria_encontrada = None
+        for cat_key, cat_nombre in catalogo_mgr.categoria_map.items():
+            if (
+                cat_nombre.upper() == categoria.upper()
+                or cat_key.upper() == categoria.upper()
+            ):
+                categoria_encontrada = cat_nombre
+                break
+
+        if not categoria_encontrada or categoria_encontrada not in catalogo:
+            raise HTTPException(
+                status_code=404, detail=f"Categoría '{categoria}' no encontrada"
             )
 
-        return categorias
+        productos = catalogo[categoria_encontrada]
+
+        return {
+            "segmento": segmento,
+            "anio": anio,
+            "mes": mes,
+            "categoria": categoria_encontrada,
+            "total_productos": len(productos),
+            "productos": productos,
+        }
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(
-            status_code=404, detail=f"Error al obtener categorías: {str(e)}"
+            status_code=404, detail=f"Error al obtener categoría: {str(e)}"
         )
 
 
-@app.get("/api/producto/{anio}/{mes}/{categoria}/{producto_id}")
+@app.get("/api/catalogo/{segmento}/{anio}/{mes}/{categoria}/{producto_id}")
 async def obtener_producto_detallado(
-    anio: str, mes: str, categoria: str, producto_id: str
+    segmento: str, anio: str, mes: str, categoria: str, producto_id: str
 ):
-    """Obtiene los detalles completos de un producto incluyendo imágenes"""
+    """Obtiene los detalles completos de un producto"""
     try:
-        catalogo = catalogo_mgr.cargar_catalogo_mes(anio, mes)
+        catalogo = catalogo_mgr.cargar_catalogo_mes(anio, mes, segmento)
 
         # Buscar la categoría
         categoria_encontrada = None
@@ -181,22 +224,21 @@ async def obtener_producto_detallado(
         if not producto:
             raise HTTPException(
                 status_code=404,
-                detail=f"Producto '{producto_id}' no encontrado en {categoria}",
+                detail=f"Producto '{producto_id}' no encontrado",
             )
 
-        # Agregar URLs de acceso directo a las imágenes
+        # Agregar URLs de acceso directo
         producto_detalle = {
             **producto,
             "urls": {
-                "imagen_listado": f"/api/producto/listado/{anio}/{mes}/{categoria_encontrada}/{producto_id}",
-                "imagen_caracteristicas": f"/api/producto/caracteristicas/{anio}/{mes}/{categoria_encontrada}/{producto_id}",
-                "imagen_directa": f"/static/{producto.get('imagen', '')}",
-                "caracteristicas_directa": f"/static/{producto.get('imagen_caracteristicas', '')}",
+                "imagen_listado": f"/api/imagen/{segmento}/{anio}/{mes}/{categoria_encontrada}/{producto_id}/listado",
+                "imagen_caracteristicas": f"/api/imagen/{segmento}/{anio}/{mes}/{categoria_encontrada}/{producto_id}/caracteristicas",
             },
         }
 
         return {
-            "año": anio,
+            "segmento": segmento,
+            "anio": anio,
             "mes": mes,
             "categoria": categoria_encontrada,
             "producto": producto_detalle,
@@ -210,13 +252,18 @@ async def obtener_producto_detallado(
         )
 
 
-@app.get("/api/producto/caracteristicas/{anio}/{mes}/{categoria}/{producto_id}")
-async def obtener_imagen_caracteristicas(
-    anio: str, mes: str, categoria: str, producto_id: str
+@app.get("/api/imagen/{segmento}/{anio}/{mes}/{categoria}/{producto_id}/{tipo_imagen}")
+async def obtener_imagen_producto(
+    segmento: str,
+    anio: str,
+    mes: str,
+    categoria: str,
+    producto_id: str,
+    tipo_imagen: str,
 ):
-    """Obtiene la imagen de características de un producto específico"""
+    """Obtiene imagen de un producto (listado o caracteristicas)"""
     try:
-        catalogo = catalogo_mgr.cargar_catalogo_mes(anio, mes)
+        catalogo = catalogo_mgr.cargar_catalogo_mes(anio, mes, segmento)
 
         # Buscar la categoría
         categoria_encontrada = None
@@ -246,25 +293,32 @@ async def obtener_imagen_caracteristicas(
         if not producto:
             raise HTTPException(
                 status_code=404,
-                detail=f"Producto '{producto_id}' no encontrado en {categoria}",
+                detail=f"Producto '{producto_id}' no encontrado",
             )
 
-        # Obtener ruta de imagen de características
-        imagen_caracteristicas = producto.get("imagen_caracteristicas")
+        # Obtener la imagen según tipo
+        if tipo_imagen == "listado":
+            imagen_path = producto.get("imagen")
+        elif tipo_imagen == "caracteristicas":
+            imagen_path = producto.get("imagen_caracteristicas")
+        else:
+            raise HTTPException(
+                status_code=400,
+                detail="tipo_imagen debe ser 'listado' o 'caracteristicas'",
+            )
 
-        if not imagen_caracteristicas:
+        if not imagen_path:
             raise HTTPException(
                 status_code=404,
-                detail=f"El producto '{producto_id}' no tiene imagen de características",
+                detail=f"Imagen {tipo_imagen} no disponible para este producto",
             )
 
-        # Construir ruta completa
-        ruta_imagen = Path(IMAGENES_DIR) / imagen_caracteristicas
+        ruta_imagen = Path(IMAGENES_DIR) / imagen_path
 
         if not ruta_imagen.exists():
             raise HTTPException(
                 status_code=404,
-                detail=f"Imagen de características no encontrada: {imagen_caracteristicas}",
+                detail=f"Imagen no encontrada: {imagen_path}",
             )
 
         return FileResponse(ruta_imagen, media_type="image/png")
@@ -273,73 +327,7 @@ async def obtener_imagen_caracteristicas(
         raise
     except Exception as e:
         raise HTTPException(
-            status_code=500,
-            detail=f"Error al obtener imagen de características: {str(e)}",
-        )
-
-
-@app.get("/api/producto/listado/{anio}/{mes}/{categoria}/{producto_id}")
-async def obtener_imagen_listado(anio: str, mes: str, categoria: str, producto_id: str):
-    """Obtiene la imagen de lista (producto) de un producto específico"""
-    try:
-        catalogo = catalogo_mgr.cargar_catalogo_mes(anio, mes)
-
-        # Buscar la categoría
-        categoria_encontrada = None
-        for cat_key, cat_nombre in catalogo_mgr.categoria_map.items():
-            if (
-                cat_nombre.upper() == categoria.upper()
-                or cat_key.upper() == categoria.upper()
-            ):
-                categoria_encontrada = cat_nombre
-                break
-
-        if not categoria_encontrada or categoria_encontrada not in catalogo:
-            raise HTTPException(
-                status_code=404, detail=f"Categoría '{categoria}' no encontrada"
-            )
-
-        # Buscar el producto
-        producto = next(
-            (
-                p
-                for p in catalogo[categoria_encontrada]
-                if str(p.get("id")).strip() == str(producto_id).strip()
-            ),
-            None,
-        )
-
-        if not producto:
-            raise HTTPException(
-                status_code=404,
-                detail=f"Producto '{producto_id}' no encontrado en {categoria}",
-            )
-
-        # Obtener ruta de imagen de lista
-        imagen_listado = producto.get("imagen")
-
-        if not imagen_listado:
-            raise HTTPException(
-                status_code=404,
-                detail=f"El producto '{producto_id}' no tiene imagen de lista",
-            )
-
-        # Construir ruta completa
-        ruta_imagen = Path(IMAGENES_DIR) / imagen_listado
-
-        if not ruta_imagen.exists():
-            raise HTTPException(
-                status_code=404,
-                detail=f"Imagen de lista no encontrada: {imagen_listado}",
-            )
-
-        return FileResponse(ruta_imagen, media_type="image/png")
-
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(
-            status_code=500, detail=f"Error al obtener imagen de lista: {str(e)}"
+            status_code=500, detail=f"Error al obtener imagen: {str(e)}"
         )
 
 
@@ -376,11 +364,11 @@ async def obtener_meses_disponibles():
 
 
 # Endpoints para servir PDFs existentes
-@app.get("/api/pdf/{anio}/{mes}/{categoria}")
-async def obtener_pdf_categoria(anio: str, mes: str, categoria: str):
+@app.get("/api/pdf/{segmento}/{anio}/{mes}/{categoria}")
+async def obtener_pdf_categoria(segmento: str, anio: str, mes: str, categoria: str):
     """Obtiene el PDF de una categoría específica"""
     try:
-        ruta_pdf = catalogo_mgr.obtener_pdf_categoria(anio, mes, categoria)
+        ruta_pdf = catalogo_mgr.obtener_pdf_categoria(anio, mes, categoria, segmento)
 
         if not ruta_pdf:
             raise HTTPException(
@@ -396,11 +384,11 @@ async def obtener_pdf_categoria(anio: str, mes: str, categoria: str):
         raise HTTPException(status_code=500, detail=f"Error al obtener PDF: {str(e)}")
 
 
-@app.get("/api/pdfs/{anio}/{mes}")
-async def listar_pdfs_mes(anio: str, mes: str):
+@app.get("/api/pdfs/{segmento}/{anio}/{mes}")
+async def listar_pdfs_mes(segmento: str, anio: str, mes: str):
     """Lista todos los PDFs disponibles en un mes"""
     try:
-        pdfs = catalogo_mgr.listar_pdfs_mes(anio, mes)
+        pdfs = catalogo_mgr.listar_pdfs_mes(anio, mes, segmento)
 
         if not pdfs:
             raise HTTPException(
@@ -408,6 +396,7 @@ async def listar_pdfs_mes(anio: str, mes: str):
             )
 
         return {
+            "segmento": segmento,
             "año": anio,
             "mes": mes,
             "pdfs_disponibles": pdfs,
@@ -420,13 +409,13 @@ async def listar_pdfs_mes(anio: str, mes: str):
         raise HTTPException(status_code=500, detail=f"Error al listar PDFs: {str(e)}")
 
 
-@app.get("/api/pdf/activo/{categoria}")
-async def obtener_pdf_categoria_activa(categoria: str):
+@app.get("/api/pdf/{segmento}/activo/{categoria}")
+async def obtener_pdf_categoria_activa(segmento: str, categoria: str):
     """Obtiene el PDF de una categoría del catálogo activo (mes actual)"""
     try:
-        catalogo_info = catalogo_mgr.detectar_catalogo_actual()
+        catalogo_info = catalogo_mgr.detectar_catalogo_actual(segmento)
         ruta_pdf = catalogo_mgr.obtener_pdf_categoria(
-            catalogo_info["año"], catalogo_info["mes"], categoria
+            catalogo_info["año"], catalogo_info["mes"], categoria, segmento
         )
 
         if not ruta_pdf:
@@ -442,12 +431,14 @@ async def obtener_pdf_categoria_activa(categoria: str):
         raise HTTPException(status_code=500, detail=f"Error al obtener PDF: {str(e)}")
 
 
-@app.get("/api/pdfs/activo")
-async def listar_pdfs_mes_activo():
+@app.get("/api/pdfs/{segmento}/activo")
+async def listar_pdfs_mes_activo(segmento: str):
     """Lista todos los PDFs disponibles del catálogo activo (mes actual)"""
     try:
-        catalogo_info = catalogo_mgr.detectar_catalogo_actual()
-        pdfs = catalogo_mgr.listar_pdfs_mes(catalogo_info["año"], catalogo_info["mes"])
+        catalogo_info = catalogo_mgr.detectar_catalogo_actual(segmento)
+        pdfs = catalogo_mgr.listar_pdfs_mes(
+            catalogo_info["año"], catalogo_info["mes"], segmento
+        )
 
         if not pdfs:
             raise HTTPException(
@@ -455,6 +446,7 @@ async def listar_pdfs_mes_activo():
             )
 
         return {
+            "segmento": segmento,
             "año": catalogo_info["año"],
             "mes": catalogo_info["mes"],
             "pdfs_disponibles": pdfs,
@@ -465,59 +457,6 @@ async def listar_pdfs_mes_activo():
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error al listar PDFs: {str(e)}")
-
-
-@app.get("/imagen/{anio}/{mes}/{categoria}/{nombre_imagen}")
-async def obtener_imagen_categoria(
-    anio: str, mes: str, categoria: str, nombre_imagen: str
-):
-    """Obtiene una imagen específica de una categoría"""
-    try:
-        # Mapear nombre de categoría a carpeta
-        categoria_upper = categoria.upper()
-        nombre_carpeta = None
-        for carpeta_key, cat_nombre in catalogo_mgr.categoria_map.items():
-            if cat_nombre == categoria_upper or carpeta_key.upper() == categoria_upper:
-                nombre_carpeta = carpeta_key
-                break
-
-        if not nombre_carpeta:
-            raise HTTPException(
-                status_code=404, detail=f"Categoría '{categoria}' no encontrada"
-            )
-
-        # Construir ruta: imagenes/catalogos/{anio}/fnb/{mes}/{categoria}/listado o caracteristicas
-        # Detectar si es producto o característica por el nombre de la carpeta
-        rutas_posibles = [
-            Path(IMAGENES_DIR)
-            / anio
-            / "fnb"
-            / mes
-            / nombre_carpeta
-            / "listado"
-            / nombre_imagen,
-            Path(IMAGENES_DIR)
-            / anio
-            / "fnb"
-            / mes
-            / nombre_carpeta
-            / "caracteristicas"
-            / nombre_imagen,
-        ]
-
-        for ruta_imagen in rutas_posibles:
-            if ruta_imagen.exists():
-                return FileResponse(ruta_imagen, media_type="image/png")
-
-        raise HTTPException(
-            status_code=404, detail=f"Imagen no encontrada: {nombre_imagen}"
-        )
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(
-            status_code=500, detail=f"Error al obtener imagen: {str(e)}"
-        )
 
 
 @app.get("/ver/{nombre_archivo}")
