@@ -25,6 +25,11 @@ class Producto(Base):
     cuotas = Column(JSON)  # {"3": 338.85, "6": 178.87, ...}
     mes = Column(String(20))
     ano = Column(Integer)
+    segmento = Column(String(50), default="fnb", index=True)  # fnb, gaso, etc.
+    estado = Column(
+        String(50), default="disponible", index=True
+    )  # disponible, no disponible, agotado, etc.
+    stock = Column(Boolean, default=True)
     stock = Column(Boolean, default=True)
 
 
