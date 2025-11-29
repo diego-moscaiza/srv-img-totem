@@ -2,11 +2,10 @@ from sqlalchemy import create_engine, Column, Integer, String, Float, Boolean, J
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 
-# Crear la conexión a PostgreSQL
-# Cambiar estos valores según tu configuración
-DATABASE_URL = "postgresql://usuario:contraseña@localhost/catalogos_db"
+# Crear la conexión a SQLite (sin necesidad de PostgreSQL)
+DATABASE_URL = "sqlite:///./catalogos.db"
 
-engine = create_engine(DATABASE_URL)
+engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 Base = declarative_base()

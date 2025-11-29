@@ -1,7 +1,7 @@
 from fastapi import APIRouter, HTTPException, Depends
 from fastapi.responses import HTMLResponse
-from database import Producto as DBProducto, SessionLocal
-from schemas import Producto, ProductoCreate, ProductoUpdate
+from src.database import Producto as DBProducto, SessionLocal
+from src.schemas import Producto, ProductoCreate, ProductoUpdate
 from typing import List
 
 router = APIRouter(prefix="/api", tags=["productos"])
@@ -27,9 +27,45 @@ async def admin_panel():
             * { margin: 0; padding: 0; box-sizing: border-box; }
             body { font-family: Arial, sans-serif; background: #f5f5f5; }
             .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
-            h1 { color: #333; margin-bottom: 30px; }
-            h2 { color: #555; margin: 20px 0 15px 0; }
-            .section { background: white; padding: 20px; margin-bottom: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+            h1 { color: #333; margin-bottom: 30px; text-align: center; }
+            
+            /* Navegación */
+            .nav { display: flex; gap: 10px; margin-bottom: 30px; border-bottom: 2px solid #ddd; }
+            .nav button { 
+                background: #f0f0f0; 
+                border: none; 
+                padding: 15px 25px; 
+                cursor: pointer; 
+                font-size: 16px;
+                font-weight: 500;
+                color: #555;
+                transition: all 0.3s;
+                border-bottom: 3px solid transparent;
+            }
+            .nav button:hover { background: #e0e0e0; }
+            .nav button.active { 
+                background: #007bff; 
+                color: white; 
+                border-bottom: 3px solid #0056b3;
+            }
+            
+            /* Secciones */
+            .section { 
+                display: none; 
+                background: white; 
+                padding: 30px; 
+                border-radius: 8px; 
+                box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+                animation: fadeIn 0.3s;
+            }
+            .section.active { display: block; }
+            
+            @keyframes fadeIn {
+                from { opacity: 0; transform: translateY(10px); }
+                to { opacity: 1; transform: translateY(0); }
+            }
+            
+            h2 { color: #333; margin-bottom: 20px; }
             .form-group { margin-bottom: 15px; }
             label { display: block; margin-bottom: 5px; color: #333; font-weight: bold; }
             input, textarea, select { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px; }
@@ -39,31 +75,45 @@ async def admin_panel():
             button.danger { background: #dc3545; }
             button.danger:hover { background: #c82333; }
             .grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; }
+            
+            /* Tabla */
             table { width: 100%; border-collapse: collapse; margin-top: 20px; }
             th, td { padding: 12px; text-align: left; border-bottom: 1px solid #ddd; }
             th { background: #f8f9fa; font-weight: bold; color: #333; }
             tr:hover { background: #f9f9f9; }
             .actions { white-space: nowrap; }
             .actions button { margin-right: 5px; padding: 5px 10px; font-size: 12px; margin-bottom: 0; }
-            .alert { padding: 15px; margin-bottom: 20px; border-radius: 4px; display: none; }
+            
+            /* Alertas */
+            .alert { padding: 15px; margin-bottom: 20px; border-radius: 4px; display: none; border-left: 4px solid; }
             .alert.show { display: block; }
-            .alert-success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
-            .alert-error { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
-            .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.4); overflow-y: auto; }
+            .alert-success { background: #d4edda; color: #155724; border-left-color: #28a745; }
+            .alert-error { background: #f8d7da; color: #721c24; border-left-color: #dc3545; }
+            
+            /* Modal */
+            .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); overflow-y: auto; }
             .modal.show { display: block; }
             .modal-content { background: white; margin: 5% auto; padding: 30px; border-radius: 8px; width: 90%; max-width: 600px; }
             .close { color: #aaa; float: right; font-size: 28px; font-weight: bold; cursor: pointer; }
             .close:hover { color: #000; }
+            
             .reload-btn { margin-bottom: 15px; }
         </style>
     </head>
     <body>
         <div class="container">
-            <h1>🛠️ Panel de Administración - Gestión de Productos</h1>
+            <h1>🛠️ Panel de Administración de Productos</h1>
             
             <div id="alertContainer"></div>
             
-            <div class="section">
+            <!-- Navegación -->
+            <div class="nav">
+                <button class="nav-btn active" onclick="mostrarSeccion('crear')">➕ Crear Producto</button>
+                <button class="nav-btn" onclick="mostrarSeccion('listar')">📋 Productos Registrados</button>
+            </div>
+            
+            <!-- Sección: Crear Producto -->
+            <div id="crear" class="section active">
                 <h2>Crear Nuevo Producto</h2>
                 <form id="crearForm">
                     <div class="grid">
@@ -115,11 +165,12 @@ async def admin_panel():
                             <textarea name="cuotas" required placeholder='{"3": 338.85, "6": 178.87, "9": 125.7, "12": 99.24}'></textarea>
                         </div>
                     </div>
-                    <button type="submit">Crear Producto</button>
+                    <button type="submit" style="margin-top: 15px;">✅ Crear Producto</button>
                 </form>
             </div>
             
-            <div class="section">
+            <!-- Sección: Productos Registrados -->
+            <div id="listar" class="section">
                 <h2>Productos Registrados</h2>
                 <button class="reload-btn" onclick="cargarProductos()">🔄 Recargar</button>
                 <table id="productosTable">
@@ -140,19 +191,36 @@ async def admin_panel():
             </div>
         </div>
 
+        <!-- Modal para editar -->
         <div id="editModal" class="modal">
             <div class="modal-content">
                 <span class="close" onclick="cerrarModal()">&times;</span>
-                <h2>Editar Producto</h2>
+                <h2>✏️ Editar Producto</h2>
                 <form id="editForm">
                     <div class="grid" id="editFormFields"></div>
-                    <button type="submit" style="margin-top: 15px;">Guardar Cambios</button>
+                    <button type="submit" style="margin-top: 15px;">💾 Guardar Cambios</button>
                 </form>
             </div>
         </div>
 
         <script>
             let productoEnEdicion = null;
+
+            // Alternar secciones
+            function mostrarSeccion(seccion) {
+                // Ocultar todas las secciones
+                document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+                document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.remove('active'));
+                
+                // Mostrar la sección seleccionada
+                document.getElementById(seccion).classList.add('active');
+                event.target.classList.add('active');
+                
+                // Si es listar, cargar productos
+                if (seccion === 'listar') {
+                    cargarProductos();
+                }
+            }
 
             document.getElementById('crearForm').addEventListener('submit', async (e) => {
                 e.preventDefault();
@@ -192,7 +260,9 @@ async def admin_panel():
                     if (response.ok) {
                         mostrarAlerta('✅ Producto creado exitosamente', 'success');
                         document.getElementById('crearForm').reset();
-                        cargarProductos();
+                        setTimeout(() => {
+                            mostrarSeccion('listar');
+                        }, 1500);
                     } else {
                         const error = await response.json();
                         mostrarAlerta('❌ Error: ' + (error.detail || 'Error desconocido'), 'error');
@@ -210,13 +280,18 @@ async def admin_panel():
                     const tbody = document.getElementById('productosBody');
                     tbody.innerHTML = '';
                     
+                    if (productos.length === 0) {
+                        tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; color: #999;">No hay productos registrados</td></tr>';
+                        return;
+                    }
+                    
                     productos.forEach(p => {
                         const row = `
                             <tr>
                                 <td>${p.id}</td>
-                                <td>${p.codigo}</td>
+                                <td><strong>${p.codigo}</strong></td>
                                 <td>${p.nombre}</td>
-                                <td>$${p.precio.toFixed(2)}</td>
+                                <td>S/. ${p.precio.toFixed(2)}</td>
                                 <td>${p.categoria}</td>
                                 <td>${p.mes}</td>
                                 <td class="actions">
@@ -243,7 +318,6 @@ async def admin_panel():
                     
                     campos.forEach((key, idx) => {
                         const value = producto[key];
-                        const isLast = idx === campos.length - 1;
                         const gridSpan = (key === 'descripcion' || key === 'imagen_listado' || key === 'imagen_caracteristicas') ? ' style="grid-column: 1/-1;"' : '';
                         
                         if (key === 'descripcion' || key === 'imagen_listado' || key === 'imagen_caracteristicas') {
@@ -308,7 +382,7 @@ async def admin_panel():
             }
 
             async function eliminarProducto(id) {
-                if (!confirm('¿Estás seguro de que deseas eliminar este producto?')) return;
+                if (!confirm('⚠️ ¿Estás seguro de que deseas eliminar este producto?')) return;
                 
                 try {
                     const response = await fetch(`/api/productos/${id}`, {
@@ -335,9 +409,6 @@ async def admin_panel():
                 container.appendChild(alert);
                 setTimeout(() => alert.remove(), 4000);
             }
-
-            // Cargar productos al abrir la página
-            cargarProductos();
         </script>
     </body>
     </html>
@@ -345,14 +416,14 @@ async def admin_panel():
 
 
 @router.get("/productos", response_model=List[Producto])
-async def listar_productos(db = Depends(get_db)):
+async def listar_productos(db=Depends(get_db)):
     """Listar todos los productos"""
     productos = db.query(DBProducto).all()
     return productos
 
 
 @router.get("/productos/{producto_id}", response_model=Producto)
-async def obtener_producto_db(producto_id: int, db = Depends(get_db)):
+async def obtener_producto_db(producto_id: int, db=Depends(get_db)):
     """Obtener un producto por ID"""
     producto = db.query(DBProducto).filter(DBProducto.id == producto_id).first()
     if not producto:
@@ -361,7 +432,7 @@ async def obtener_producto_db(producto_id: int, db = Depends(get_db)):
 
 
 @router.post("/productos", response_model=Producto)
-async def crear_producto(producto: ProductoCreate, db = Depends(get_db)):
+async def crear_producto(producto: ProductoCreate, db=Depends(get_db)):
     """Crear un nuevo producto"""
     db_producto = DBProducto(**producto.dict())
     db.add(db_producto)
@@ -371,16 +442,18 @@ async def crear_producto(producto: ProductoCreate, db = Depends(get_db)):
 
 
 @router.put("/productos/{producto_id}", response_model=Producto)
-async def actualizar_producto(producto_id: int, producto: ProductoUpdate, db = Depends(get_db)):
+async def actualizar_producto(
+    producto_id: int, producto: ProductoUpdate, db=Depends(get_db)
+):
     """Actualizar un producto"""
     db_producto = db.query(DBProducto).filter(DBProducto.id == producto_id).first()
     if not db_producto:
         raise HTTPException(status_code=404, detail="Producto no encontrado")
-    
+
     update_data = producto.dict(exclude_unset=True)
     for key, value in update_data.items():
         setattr(db_producto, key, value)
-    
+
     db.add(db_producto)
     db.commit()
     db.refresh(db_producto)
@@ -388,12 +461,12 @@ async def actualizar_producto(producto_id: int, producto: ProductoUpdate, db = D
 
 
 @router.delete("/productos/{producto_id}")
-async def eliminar_producto(producto_id: int, db = Depends(get_db)):
+async def eliminar_producto(producto_id: int, db=Depends(get_db)):
     """Eliminar un producto"""
     db_producto = db.query(DBProducto).filter(DBProducto.id == producto_id).first()
     if not db_producto:
         raise HTTPException(status_code=404, detail="Producto no encontrado")
-    
+
     db.delete(db_producto)
     db.commit()
     return {"mensaje": "Producto eliminado exitosamente"}
