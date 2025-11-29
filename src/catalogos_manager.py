@@ -1,155 +1,109 @@
-import json
-import os
 from pathlib import Path
-from datetime import datetime, timedelta
+from datetime import datetime
 from typing import Dict, List, Optional
+from src.database import SessionLocal, Producto
 
 
-class CatalogoManager:
+class SegmentoCatalogo:
+    """Abstracción para manejar un segmento específico (fnb, gaso, etc.)"""
+
     def __init__(
-        self, base_dir: str = "api/catalogos", imagenes_base: str = "imagenes/catalogos"
+        self, nombre_segmento: str, categoria_map: Dict[str, str], imagenes_base: Path
     ):
-        self.base_dir = Path(base_dir)
-        self.imagenes_base = Path(imagenes_base)
-        self.catalogos_cache = {}
-
-        # Mapeo de carpetas a nombres de categoría legibles
-        self.categoria_map = {
-            "1-celulares": "CELULARES",
-            "2-laptops": "LAPTOPS",
-            "3-televisores": "TELEVISORES",
-            "4-refrigeradoras": "REFRIGERADORAS",
-            "5-lavadoras": "LAVADORAS",
-        }
-
-    def detectar_catalogo_actual(self) -> Dict:
-        """Detecta automáticamente el catálogo del mes actual"""
-        año_actual = datetime.now().strftime("%Y")
-        mes_actual = datetime.now().strftime("%m")  # "01", "02", etc.
-
-        meses_espanol = {
-            "01": "enero",
-            "02": "febrero",
-            "03": "marzo",
-            "04": "abril",
-            "05": "mayo",
-            "06": "junio",
-            "07": "julio",
-            "08": "agosto",
-            "09": "septiembre",
-            "10": "octubre",
-            "11": "noviembre",
-            "12": "diciembre",
-        }
-
-        mes_nombre = meses_espanol.get(mes_actual)
-
-        # Verificar que mes_nombre no sea None antes de construir la ruta
-        if not mes_nombre:
-            # Fallback: usar el primer mes disponible o mes por defecto
-            mes_nombre = "enero"
-
-        # Construir la ruta de manera segura (usando la ruta de productos JSON)
-        ruta_catalogo = self.base_dir / año_actual / "fnb" / mes_nombre
-
-        return {
-            "año": año_actual,
-            "mes": mes_nombre,
-            "mes_numero": mes_actual,
-            "ruta_base": str(ruta_catalogo),
-            "existe": ruta_catalogo.exists(),
-        }
+        self.nombre = nombre_segmento
+        self.categoria_map = categoria_map
+        self.imagenes_base = imagenes_base
+        self.cache = {}
 
     def cargar_catalogo_mes(self, año: str, mes: str) -> Dict:
-        """Carga el catálogo de un mes específico desde los archivos JSON"""
-        # Validar que año y mes no sean None o vacíos
-        if not año or not mes:
-            año = datetime.now().strftime("%Y")
-            mes = "enero"
-
+        """Carga el catálogo de un mes específico desde la BD"""
         cache_key = f"{año}-{mes}"
 
-        if cache_key in self.catalogos_cache:
-            return self.catalogos_cache[cache_key]
+        if cache_key in self.cache:
+            return self.cache[cache_key]
 
-        # Cargar catálogo desde archivos JSON reales
-        catalogo = self._cargar_catalogo_desde_json(año, mes)
-        self.catalogos_cache[cache_key] = catalogo
-
+        catalogo = self._cargar_desde_db(año, mes)
+        self.cache[cache_key] = catalogo
         return catalogo
 
-    def _cargar_catalogo_desde_json(self, año: str, mes: str) -> Dict:
-        """Carga productos reales desde los archivos JSON directos (1-celulares.json, etc.)"""
+    def _cargar_desde_db(self, año: str, mes: str) -> Dict:
+        """Carga productos desde la BD para este segmento"""
         catalogo = {}
 
-        # Ruta base donde están los archivos JSON
-        ruta_mes = self.base_dir / año / "fnb" / mes
+        try:
+            db = SessionLocal()
 
-        if not ruta_mes.exists():
-            print(f"⚠️ Advertencia: No existe la ruta {ruta_mes}")
-            return catalogo
-
-        # Recorrer cada archivo JSON de categoría (1-celulares.json, 2-laptops.json, etc.)
-        for archivo in sorted(ruta_mes.glob("*.json")):
-            if not archivo.is_file():
-                continue
-
-            nombre_archivo = archivo.stem  # Nombre sin extensión (ej: "1-celulares")
-
-            # Obtener el nombre de categoría desde el mapeo
-            categoria_nombre = self.categoria_map.get(nombre_archivo)
-
-            if not categoria_nombre:
-                print(f"⚠️ Archivo no reconocido: {nombre_archivo}.json")
-                continue
-
-            # Cargar y procesar el JSON
-            try:
-                with open(archivo, "r", encoding="utf-8") as f:
-                    productos = json.load(f)
-
-                # Procesar cada producto para agregar información de rutas
-                productos_procesados = []
-                for producto in productos:
-                    # Obtener solo el nombre del archivo de imagen (sin ruta)
-                    imagen_original = producto.get('imagen', '')
-                    # Si la imagen ya tiene ruta, extraer solo el nombre del archivo
-                    nombre_imagen = Path(imagen_original).name if imagen_original else ''
-                    
-                    # Enriquecer producto con información adicional
-                    producto_enriquecido = {
-                        **producto,
-                        "categoria": categoria_nombre,
-                        "mes_validez": f"{año}-{mes}",
-                        "stock": True,  # Por defecto asumimos que tiene stock
-                        # Construir rutas dinámicamente usando solo el nombre del archivo
-                        "ruta_imagen_relativa": f"catalogos/{año}/fnb/{mes}/{nombre_archivo}/{nombre_imagen}",
-                        "ruta_imagen_absoluta": f"/static/catalogos/{año}/fnb/{mes}/{nombre_archivo}/{nombre_imagen}",
-                    }
-                    productos_procesados.append(producto_enriquecido)
-
-                catalogo[categoria_nombre] = productos_procesados
-
-            except json.JSONDecodeError as e:
-                print(f"❌ Error al parsear JSON en {archivo}: {e}")
-                catalogo[categoria_nombre] = []
-            except Exception as e:
-                print(f"❌ Error al cargar {archivo}: {e}")
-                catalogo[categoria_nombre] = []
-
-        return catalogo
-
-    def validar_producto(self, producto_id: str, categoria: str) -> Dict:
-        """Valida si un producto está disponible"""
-        # Validar parámetros de entrada
-        if not producto_id or not categoria:
-            return {
-                "disponible": False,
-                "razon": "producto_id y categoria son requeridos",
+            # Convertir número de mes a nombre si es necesario
+            meses_map = {
+                "01": "enero",
+                "02": "febrero",
+                "03": "marzo",
+                "04": "abril",
+                "05": "mayo",
+                "06": "junio",
+                "07": "julio",
+                "08": "agosto",
+                "09": "septiembre",
+                "10": "octubre",
+                "11": "noviembre",
+                "12": "diciembre",
             }
 
-        catalogo_info = self.detectar_catalogo_actual()
-        catalogo = self.cargar_catalogo_mes(catalogo_info["año"], catalogo_info["mes"])
+            mes_nombre = meses_map.get(mes, mes)
+
+            # Consultar productos del mes y año
+            productos = (
+                db.query(Producto)
+                .filter(
+                    Producto.ano == int(año),
+                    Producto.mes == mes_nombre,
+                    Producto.segmento == self.nombre,
+                )
+                .all()
+            )
+
+            db.close()
+
+            # Agrupar por categoría
+            for producto in productos:
+                categoria = producto.categoria
+
+                if categoria not in catalogo:
+                    catalogo[categoria] = []
+
+                producto_dict = {
+                    "id": producto.codigo,
+                    "codigo": producto.codigo,
+                    "nombre": producto.nombre,
+                    "descripcion": producto.descripcion,
+                    "precio": producto.precio,
+                    "categoria": categoria,
+                    "imagen": producto.imagen_listado,
+                    "imagen_caracteristicas": producto.imagen_caracteristicas,
+                    "cuotas": producto.cuotas,
+                    "stock": producto.stock,
+                    "mes_validez": f"{año}-{mes_nombre}",
+                    "segmento": self.nombre,
+                    "activo": (
+                        año == datetime.now().strftime("%Y")
+                        and mes_nombre == self._convertir_mes_actual()
+                    ),
+                }
+
+                catalogo[categoria].append(producto_dict)
+
+            return catalogo
+
+        except Exception as e:
+            print(f"❌ Error al cargar catálogo {self.nombre}: {e}")
+            return {}
+
+    def validar_producto(self, producto_id: str, categoria: str) -> Dict:
+        """Valida disponibilidad de un producto en este segmento"""
+        catalogo_actual = self.detectar_mes_actual()
+        catalogo = self.cargar_catalogo_mes(
+            catalogo_actual["año"], catalogo_actual["mes"]
+        )
 
         if categoria not in catalogo:
             return {"disponible": False, "razon": "Categoría no disponible"}
@@ -164,130 +118,225 @@ class CatalogoManager:
         if not producto["stock"]:
             return {"disponible": False, "razon": "Sin stock"}
 
-        return {
-            "disponible": True,
-            "producto": producto,
-            "catalogo_actual": catalogo_info,
+        return {"disponible": True, "producto": producto}
+
+    def detectar_mes_actual(self) -> Dict:
+        """Detecta el mes actual"""
+        año = datetime.now().strftime("%Y")
+        mes_num = datetime.now().strftime("%m")
+
+        meses_map = {
+            "01": "enero",
+            "02": "febrero",
+            "03": "marzo",
+            "04": "abril",
+            "05": "mayo",
+            "06": "junio",
+            "07": "julio",
+            "08": "agosto",
+            "09": "septiembre",
+            "10": "octubre",
+            "11": "noviembre",
+            "12": "diciembre",
         }
 
-    def obtener_meses_disponibles(self) -> List[Dict]:
-        """Obtiene lista de meses con catálogos disponibles desde los JSON"""
-        meses_disponibles = []
+        mes_nombre = meses_map.get(mes_num, "noviembre")
 
-        if not self.base_dir.exists():
-            print(f"⚠️ No existe el directorio base: {self.base_dir}")
-            return meses_disponibles
+        return {
+            "año": año,
+            "mes": mes_nombre,
+            "mes_numero": mes_num,
+            "segmento": self.nombre,
+        }
 
-        try:
-            for año_dir in sorted(self.base_dir.iterdir()):
-                if not año_dir.is_dir():
-                    continue
+    def _convertir_mes_actual(self) -> str:
+        """Convierte el mes actual a nombre"""
+        mes_num = datetime.now().strftime("%m")
+        meses_map = {
+            "01": "enero",
+            "02": "febrero",
+            "03": "marzo",
+            "04": "abril",
+            "05": "mayo",
+            "06": "junio",
+            "07": "julio",
+            "08": "agosto",
+            "09": "septiembre",
+            "10": "octubre",
+            "11": "noviembre",
+            "12": "diciembre",
+        }
+        return meses_map.get(mes_num, "noviembre")
 
-                # Buscar dentro de "fnb"
-                fnb_dir = año_dir / "fnb"
-                if not fnb_dir.exists():
-                    continue
-
-                for mes_dir in sorted(fnb_dir.iterdir()):
-                    if mes_dir.is_dir():
-                        meses_disponibles.append(
-                            {
-                                "año": año_dir.name,
-                                "mes": mes_dir.name,
-                                "ruta": str(mes_dir),
-                                "tiene_productos": self._contar_productos(mes_dir),
-                            }
-                        )
-        except Exception as e:
-            print(f"❌ Error al obtener meses disponibles: {e}")
-
-        return sorted(
-            meses_disponibles, key=lambda x: (x["año"], x["mes"]), reverse=True
-        )
-
-    def _contar_productos(self, ruta_mes: Path) -> int:
-        """Cuenta el total de productos en un mes desde archivos JSON directos"""
-        total = 0
-        for archivo in ruta_mes.glob("*.json"):
-            if archivo.is_file():
-                try:
-                    with open(archivo, "r", encoding="utf-8") as f:
-                        productos = json.load(f)
-                        total += len(productos) if isinstance(productos, list) else 0
-                except:
-                    pass
-        return total
-
-    def obtener_pdf_categoria(self, año: str, mes: str, categoria: str) -> Optional[Path]:
-        """
-        Obtiene la ruta del PDF de una categoría específica
-        
-        Args:
-            año: Año del catálogo
-            mes: Mes del catálogo
-            categoria: Nombre o número de la categoría (ej: "CELULARES" o "1-celulares")
-        
-        Returns:
-            Path del PDF si existe, None si no lo encuentra
-        """
-        # Normalizar la entrada
+    def obtener_pdf_categoria(
+        self, año: str, mes: str, categoria: str
+    ) -> Optional[Path]:
+        """Obtiene la ruta del PDF de una categoría"""
         categoria_upper = categoria.upper()
-        
-        # Buscar en el mapeo de categorías
+
         nombre_carpeta = None
         for carpeta_key, cat_nombre in self.categoria_map.items():
-            if cat_nombre == categoria_upper or carpeta_key == categoria or carpeta_key.upper() == categoria_upper:
+            if (
+                cat_nombre == categoria_upper
+                or carpeta_key == categoria
+                or carpeta_key.upper() == categoria_upper
+            ):
                 nombre_carpeta = carpeta_key
                 break
-        
+
         if not nombre_carpeta:
             return None
-        
-        # Construir la ruta de la carpeta de la categoría
-        ruta_categoria = self.imagenes_base / año / "fnb" / mes / nombre_carpeta
-        
+
+        ruta_categoria = self.imagenes_base / año / self.nombre / mes / nombre_carpeta
+
         if not ruta_categoria.exists():
             return None
-        
-        # Buscar archivos PDF en esa carpeta
+
         pdfs = list(ruta_categoria.glob("*.pdf"))
-        
-        if pdfs:
-            return pdfs[0]  # Retornar el primer PDF encontrado
-        
-        return None
+        return pdfs[0] if pdfs else None
 
     def listar_pdfs_mes(self, año: str, mes: str) -> Dict[str, Optional[str]]:
-        """
-        Lista todos los PDFs disponibles en un mes
-        
-        Args:
-            año: Año del catálogo
-            mes: Mes del catálogo
-        
-        Returns:
-            Diccionario con categorías y rutas relativas de sus PDFs
-        """
+        """Lista PDFs disponibles en un mes para este segmento"""
         pdfs_disponibles = {}
-        
-        ruta_mes = self.imagenes_base / año / "fnb" / mes
-        
+
+        ruta_mes = self.imagenes_base / año / self.nombre / mes
+
         if not ruta_mes.exists():
             return pdfs_disponibles
-        
+
         for nombre_carpeta, categoria_nombre in sorted(self.categoria_map.items()):
             ruta_categoria = ruta_mes / nombre_carpeta
-            
+
             if ruta_categoria.exists():
                 pdfs = list(ruta_categoria.glob("*.pdf"))
                 if pdfs:
-                    # Obtener ruta relativa desde imagenes/
                     ruta_relativa = pdfs[0].relative_to(self.imagenes_base)
-                    pdfs_disponibles[categoria_nombre] = str(ruta_relativa).replace("\\", "/")
+                    pdfs_disponibles[categoria_nombre] = str(ruta_relativa).replace(
+                        "\\", "/"
+                    )
                 else:
                     pdfs_disponibles[categoria_nombre] = None
-        
+
         return pdfs_disponibles
+
+
+class CatalogoManager:
+    """Gestor central de catálogos por segmento"""
+
+    def __init__(
+        self,
+        imagenes_base: str = "imagenes/catalogos",
+        segmentos: Optional[List[str]] = None,
+    ):
+        self.imagenes_base = Path(imagenes_base)
+        self.segmentos: Dict[str, SegmentoCatalogo] = {}
+
+        # Mapeo de categorías (compartido por todos los segmentos)
+        self.categoria_map = {
+            "1-celulares": "CELULARES",
+            "2-laptops": "LAPTOPS",
+            "3-televisores": "TELEVISORES",
+            "4-refrigeradoras": "REFRIGERADORAS",
+            "5-lavadoras": "LAVADORAS",
+        }
+
+        # Crear instancias de cada segmento
+        segmentos_default = segmentos or ["fnb", "gaso"]
+        for segmento_nombre in segmentos_default:
+            self.segmentos[segmento_nombre] = SegmentoCatalogo(
+                segmento_nombre, self.categoria_map, self.imagenes_base
+            )
+
+    def obtener_segmento(self, nombre_segmento: str = "fnb") -> SegmentoCatalogo:
+        """Obtiene la instancia de un segmento específico"""
+        if nombre_segmento not in self.segmentos:
+            raise ValueError(
+                f"Segmento '{nombre_segmento}' no existe. Disponibles: {list(self.segmentos.keys())}"
+            )
+        return self.segmentos[nombre_segmento]
+
+    def detectar_catalogo_actual(self, segmento: str = "fnb") -> Dict:
+        """Detecta automáticamente el catálogo del mes actual para un segmento"""
+        segmento_obj = self.obtener_segmento(segmento)
+        return segmento_obj.detectar_mes_actual()
+
+    def cargar_catalogo_mes(self, año: str, mes: str, segmento: str = "fnb") -> Dict:
+        """Carga el catálogo de un mes específico desde la BD para un segmento"""
+        if not año or not mes:
+            año = datetime.now().strftime("%Y")
+            mes = "noviembre"
+
+        segmento_obj = self.obtener_segmento(segmento)
+        return segmento_obj.cargar_catalogo_mes(año, mes)
+
+    def validar_producto(
+        self, producto_id: str, categoria: str, segmento: str = "fnb"
+    ) -> Dict:
+        """Valida si un producto está disponible en un segmento"""
+        if not producto_id or not categoria:
+            return {
+                "disponible": False,
+                "razon": "producto_id y categoria son requeridos",
+            }
+
+        segmento_obj = self.obtener_segmento(segmento)
+        return segmento_obj.validar_producto(producto_id, categoria)
+
+    def obtener_meses_disponibles(self) -> List[Dict]:
+        """Obtiene lista de meses disponibles con productos en la BD"""
+        meses_disponibles = []
+
+        try:
+            db = SessionLocal()
+            registros = db.query(Producto.ano, Producto.mes).distinct().all()
+            db.close()
+
+            meses_dict = {}
+            for ano, mes in registros:
+                key = f"{ano}-{mes}"
+                if key not in meses_dict:
+                    meses_dict[key] = {"año": str(ano), "mes": mes}
+
+            for key, mes_info in meses_dict.items():
+                db = SessionLocal()
+                cantidad = (
+                    db.query(Producto)
+                    .filter(
+                        Producto.ano == int(mes_info["año"]),
+                        Producto.mes == mes_info["mes"],
+                    )
+                    .count()
+                )
+                db.close()
+
+                meses_info_completa = {**mes_info, "tiene_productos": cantidad}
+                meses_disponibles.append(meses_info_completa)
+
+            return sorted(
+                meses_disponibles, key=lambda x: (x["año"], x["mes"]), reverse=True
+            )
+
+        except Exception as e:
+            print(f"❌ Error al obtener meses disponibles: {e}")
+            return []
+
+    def obtener_segmentos_disponibles(self) -> List[str]:
+        """Obtiene lista de segmentos configurados"""
+        return list(self.segmentos.keys())
+
+    def obtener_pdf_categoria(
+        self, año: str, mes: str, categoria: str, segmento: str = "fnb"
+    ) -> Optional[Path]:
+        """Obtiene la ruta del PDF de una categoría para un segmento"""
+        segmento_obj = self.obtener_segmento(segmento)
+        return segmento_obj.obtener_pdf_categoria(año, mes, categoria)
+
+    def listar_pdfs_mes(
+        self, año: str, mes: str, segmento: str = "fnb"
+    ) -> Dict[str, Optional[str]]:
+        """Lista PDFs disponibles en un mes para un segmento"""
+        segmento_obj = self.obtener_segmento(segmento)
+        return segmento_obj.listar_pdfs_mes(año, mes)
 
 
 # Instancia global
