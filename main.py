@@ -628,9 +628,20 @@ async def obtener_imagenes_disponibles(
 
                         categoria_actual = categoria_dir.name.lower()
 
-                        # Si se especifica categoría, filtrar exactamente
-                        if categoria and not categoria_actual.endswith(categoria):
-                            continue
+                        # Si se especifica categoría, mapear y filtrar
+                        # La categoría viene como "celulares" pero las carpetas están como "1-celulares"
+                        if categoria:
+                            # Extraer la palabra clave de la carpeta (lo que viene después del guión)
+                            # Ej: "1-celulares" → "celulares"
+                            categoria_clave = (
+                                "-".join(categoria_actual.split("-")[1:])
+                                if "-" in categoria_actual
+                                else categoria_actual
+                            )
+
+                            # Comparar la palabra clave con la categoría recibida
+                            if categoria_clave != categoria:
+                                continue
 
                         # Buscar carpeta "precios" (listado)
                         precios_dir = categoria_dir / "precios"
