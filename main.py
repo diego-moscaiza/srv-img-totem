@@ -72,6 +72,7 @@ async def root():
             },
             "imagenes": {
                 "por_nombre": "/ver/{nombre_archivo}",
+                "por_disponibilidad": "/api/imagenes-disponibles",
                 "por_ruta_catalogos": "/api/catalogos/{ruta_completa}",
                 "por_ruta_legacy": "/ver-ruta/{ruta_completa}",
             },
@@ -556,6 +557,138 @@ async def diagnostico():
         return diagnostico_info
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error en diagnóstico: {str(e)}")
+
+
+@app.get("/api/imagenes-disponibles")
+async def obtener_imagenes_disponibles(
+    segmento: str = None, ano: int = None, mes: str = None, categoria: str = None
+):
+    """Obtiene lista de imágenes disponibles, opcionalmente filtradas por segmento, año, mes y categoría"""
+    try:
+        imagenes_disponibles = {"listado": {}, "caracteristicas": {}}
+
+        imagenes_dir = Path(IMAGENES_DIR) / "catalogos"
+
+        if not imagenes_dir.exists():
+            return imagenes_disponibles
+
+        # Normalizar parámetros de entrada
+        segmento = segmento.strip().lower() if segmento and segmento.strip() else None
+        ano = int(ano) if ano else None
+        mes = mes.strip().lower() if mes and mes.strip() else None
+        categoria = (
+            categoria.strip().lower() if categoria and categoria.strip() else None
+        )
+
+        # Recorrer estructura: catalogos/segmento/año/mes/categoría/tipo_imagen
+        for segmento_dir in imagenes_dir.iterdir():
+            if not segmento_dir.is_dir():
+                continue
+
+            segmento_actual = segmento_dir.name.lower()
+
+            # Si se especifica segmento, filtrar exactamente
+            if segmento and segmento_actual != segmento:
+                continue
+
+            for año_dir in segmento_dir.iterdir():
+                if not año_dir.is_dir():
+                    continue
+
+                try:
+                    año_actual = int(año_dir.name)
+                except ValueError:
+                    continue
+
+                # Si se especifica año, filtrar exactamente
+                if ano and año_actual != ano:
+                    continue
+
+                for mes_dir in año_dir.iterdir():
+                    if not mes_dir.is_dir():
+                        continue
+
+                    mes_actual = mes_dir.name.lower()
+
+                    # Si se especifica mes, verificar que esté en el nombre de la carpeta
+                    # Ej: mes="noviembre" debe coincidir con "11-noviembre"
+                    if mes:
+                        # Extraer el nombre del mes de la carpeta (ej: "noviembre" de "11-noviembre")
+                        mes_nombre = (
+                            "-".join(mes_actual.split("-")[1:])
+                            if "-" in mes_actual
+                            else mes_actual
+                        )
+                        if mes_nombre != mes:
+                            continue
+
+                    for categoria_dir in mes_dir.iterdir():
+                        if not categoria_dir.is_dir():
+                            continue
+
+                        categoria_actual = categoria_dir.name.lower()
+
+                        # Si se especifica categoría, filtrar exactamente
+                        if categoria and not categoria_actual.endswith(categoria):
+                            continue
+
+                        # Buscar carpeta "precios" (listado)
+                        precios_dir = categoria_dir / "precios"
+                        if precios_dir.exists():
+                            imagenes_listado = list(precios_dir.glob("*.png")) + list(
+                                precios_dir.glob("*.jpg")
+                            )
+                            for img in sorted(imagenes_listado):
+                                ruta_relativa = img.relative_to(imagenes_dir)
+                                ruta_relativa_str = str(ruta_relativa).replace(
+                                    "\\", "/"
+                                )
+                                # Construir URL completa
+                                url_completa = (
+                                    f"{SERVER_URL}/api/catalogos/{ruta_relativa_str}"
+                                )
+                                key = f"{segmento_dir.name}/{año_dir.name}/{mes_dir.name}/{categoria_dir.name}"
+                                if key not in imagenes_disponibles["listado"]:
+                                    imagenes_disponibles["listado"][key] = []
+                                imagenes_disponibles["listado"][key].append(
+                                    {
+                                        "ruta": ruta_relativa_str,
+                                        "url": url_completa,
+                                        "nombre": img.name,
+                                    }
+                                )
+
+                        # Buscar carpeta "caracteristicas"
+                        caracteristicas_dir = categoria_dir / "caracteristicas"
+                        if caracteristicas_dir.exists():
+                            imagenes_carac = list(
+                                caracteristicas_dir.glob("*.png")
+                            ) + list(caracteristicas_dir.glob("*.jpg"))
+                            for img in sorted(imagenes_carac):
+                                ruta_relativa = img.relative_to(imagenes_dir)
+                                ruta_relativa_str = str(ruta_relativa).replace(
+                                    "\\", "/"
+                                )
+                                # Construir URL completa
+                                url_completa = (
+                                    f"{SERVER_URL}/api/catalogos/{ruta_relativa_str}"
+                                )
+                                key = f"{segmento_dir.name}/{año_dir.name}/{mes_dir.name}/{categoria_dir.name}"
+                                if key not in imagenes_disponibles["caracteristicas"]:
+                                    imagenes_disponibles["caracteristicas"][key] = []
+                                imagenes_disponibles["caracteristicas"][key].append(
+                                    {
+                                        "ruta": ruta_relativa_str,
+                                        "url": url_completa,
+                                        "nombre": img.name,
+                                    }
+                                )
+
+        return imagenes_disponibles
+    except Exception as e:
+        raise HTTPException(
+            status_code=500, detail=f"Error al obtener imágenes: {str(e)}"
+        )
 
 
 # Importar y registrar rutas CRUD
