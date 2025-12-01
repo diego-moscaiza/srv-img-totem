@@ -274,6 +274,87 @@ async def admin_panel():
                 color: #999;
             }
             .empty-state p { font-size: 1.1em; }
+            
+            /* Galería de productos */
+            .productos-grid {
+                display: grid;
+                grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+                gap: 20px;
+                margin-top: 20px;
+            }
+            .producto-card {
+                background: #fff;
+                border: 1px solid #e0e0e0;
+                border-radius: 12px;
+                overflow: hidden;
+                transition: all 0.3s ease;
+                box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            }
+            .producto-card:hover {
+                box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+                transform: translateY(-2px);
+            }
+            .producto-imagen {
+                width: 100%;
+                height: 180px;
+                background: #f9fafd;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                overflow: hidden;
+            }
+            .producto-imagen img {
+                max-width: 100%;
+                max-height: 100%;
+                object-fit: contain;
+            }
+            .producto-info {
+                padding: 15px;
+            }
+            .producto-codigo {
+                font-weight: 600;
+                color: #2d5be3;
+                font-size: 0.9em;
+            }
+            .producto-nombre {
+                font-weight: 600;
+                color: #222;
+                margin: 8px 0;
+                font-size: 0.95em;
+                display: -webkit-box;
+                -webkit-line-clamp: 2;
+                -webkit-box-orient: vertical;
+                overflow: hidden;
+            }
+            .producto-precio {
+                color: #2d5be3;
+                font-weight: 700;
+                font-size: 1.1em;
+                margin: 8px 0;
+            }
+            .producto-meta {
+                display: flex;
+                gap: 8px;
+                margin: 10px 0;
+                flex-wrap: wrap;
+            }
+            .producto-badge {
+                font-size: 0.75em;
+                padding: 4px 8px;
+                border-radius: 4px;
+                font-weight: 600;
+            }
+            .producto-acciones {
+                display: flex;
+                gap: 8px;
+                margin-top: 12px;
+            }
+            .producto-acciones button {
+                flex: 1;
+                padding: 8px 12px;
+                font-size: 12px;
+                margin: 0;
+            }
         </style>
     </head>
     <body>
@@ -378,24 +459,7 @@ async def admin_panel():
             <div id="listar" class="section">
                 <h2>📋 Productos Registrados</h2>
                 <button class="reload-btn" onclick="cargarProductos()">🔄 Recargar</button>
-                <div class="table-wrapper">
-                    <table id="productosTable">
-                        <thead>
-                            <tr>
-                                <th>ID</th>
-                                <th>Código</th>
-                                <th>Nombre</th>
-                                <th>Precio</th>
-                                <th>Categoría</th>
-                                <th>Segmento</th>
-                                <th>Estado</th>
-                                <th>Mes</th>
-                                <th>Acciones</th>
-                            </tr>
-                        </thead>
-                        <tbody id="productosBody">
-                        </tbody>
-                    </table>
+                <div id="productosGaleria" class="productos-grid">
                 </div>
             </div>
         </div>
@@ -501,16 +565,20 @@ async def admin_panel():
                 try {
                     const response = await fetch('/api/productos');
                     if (!response.ok) {
-                        mostrarAlerta('❌ Error al obtener productos del servidor', 'error');
+                        mostrarAlerta('❌ Error al obtener productos', 'error');
                         return;
                     }
                     const productos = await response.json();
                     
-                    const tbody = document.getElementById('productosBody');
-                    tbody.innerHTML = '';
+                    const galeria = document.getElementById('productosGaleria');
+                    if (!galeria) {
+                        console.error('No se encontró elemento productosGaleria');
+                        return;
+                    }
+                    galeria.innerHTML = '';
                     
                     if (!productos || productos.length === 0) {
-                        tbody.innerHTML = '<tr><td colspan="9" style="text-align: center; padding: 40px; color: #999;"><div class="empty-state"><p>📭 No hay productos registrados</p></div></td></tr>';
+                        galeria.innerHTML = '<div style="grid-column: 1/-1; text-align: center; padding: 40px; color: #999;">📭 No hay productos registrados</div>';
                         return;
                     }
                     
@@ -521,31 +589,151 @@ async def admin_panel():
                             const segmentoColor = p.segmento === 'fnb' ? '#cfe2ff' : '#fff3cd';
                             const segmentoTextColor = p.segmento === 'fnb' ? '#084298' : '#664d03';
                             
-                            const estadoBadge = '<span style="background: ' + estadoColor + '; color: ' + estadoTextColor + '; padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: 600;">' + (p.estado || 'N/A') + '</span>';
-                            const segmentoBadge = '<span style="background: ' + segmentoColor + '; color: ' + segmentoTextColor + '; padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: 600;">' + (p.segmento ? p.segmento.toUpperCase() : 'N/A') + '</span>';
+                            const imagenUrl = p.imagen_listado ? '/ver-ruta/' + p.imagen_listado : '';
                             
-                            const row = '<tr>' +
-                                '<td><strong>#' + (p.id || '') + '</strong></td>' +
-                                '<td><strong>' + (p.codigo || '') + '</strong></td>' +
-                                '<td>' + (p.nombre || '') + '</td>' +
-                                '<td>S/. ' + (p.precio ? p.precio.toFixed(2) : '0.00') + '</td>' +
-                                '<td>' + (p.categoria || '') + '</td>' +
-                                '<td>' + segmentoBadge + '</td>' +
-                                '<td>' + estadoBadge + '</td>' +
-                                '<td>' + (p.mes || '') + '</td>' +
-                                '<td class="actions">' +
-                                '<button onclick="abrirEditModal(' + p.id + ')">✏️ Editar</button>' +
-                                '<button class="danger" onclick="eliminarProducto(' + p.id + ')">🗑️ Eliminar</button>' +
-                                '</td>' +
-                                '</tr>';
-                            tbody.innerHTML += row;
-                        } catch(rowError) {
-                            console.error('Error al procesar producto:', p, rowError);
+                            const card = document.createElement('div');
+                            card.className = 'producto-card';
+                            card.innerHTML = `
+                                <div class="producto-imagen" id="img-${p.id}">
+                                    ${imagenUrl ? `<img src="${imagenUrl}" alt="${p.nombre}" style="width: 100%; height: 100%; object-fit: contain; border-radius: 8px; border: 1px solid #e0e0e0;">` : '<div style="display: flex; align-items: center; justify-content: center; height: 100%; width: 100%; font-size: 0.9em; color: #999; border: 2px dashed #d0d0d0; border-radius: 8px;">Sin imagen</div>'}
+                                </div>
+                                <div class="producto-info">
+                                    <div class="producto-codigo">${p.codigo}</div>
+                                    <div class="producto-nombre">${p.nombre}</div>
+                                    <div class="producto-precio">S/. ${p.precio.toFixed(2)}</div>
+                                    <div class="producto-meta">
+                                        <span class="producto-badge" style="background: ${segmentoColor}; color: ${segmentoTextColor};">${p.segmento.toUpperCase()}</span>
+                                        <span class="producto-badge" style="background: ${estadoColor}; color: ${estadoTextColor};">${p.estado}</span>
+                                    </div>
+                                    <div class="producto-acciones">
+                                        <button onclick="abrirDetalle(${p.id})">👁️ Ver</button>
+                                        <button onclick="abrirEditModal(${p.id})">✏️ Editar</button>
+                                        <button class="danger" onclick="eliminarProducto(${p.id})">🗑️ Eliminar</button>
+                                    </div>
+                                </div>
+                            `;
+                            galeria.appendChild(card);
+                            
+                            // Manejar error de carga de imagen
+                            if (imagenUrl) {
+                                const img = card.querySelector('img');
+                                if (img) {
+                                    img.onerror = function() {
+                                        const container = document.getElementById('img-' + p.id);
+                                        if (container) {
+                                            container.innerHTML = '<div style="display: flex; align-items: center; justify-content: center; height: 100%; width: 100%; font-size: 0.9em; color: #999; border: 2px dashed #d0d0d0; border-radius: 8px;">Sin imagen</div>';
+                                        }
+                                    };
+                                }
+                            }
+                        } catch(e) {
+                            console.error('Error procesando producto:', p, e);
                         }
                     });
                 } catch(e) {
-                    console.error('Error completo:', e);
-                    mostrarAlerta('❌ Error al cargar productos: ' + e.message, 'error');
+                    console.error('Error en cargarProductos:', e);
+                    mostrarAlerta('❌ Error: ' + e.message, 'error');
+                }
+            }
+
+            async function abrirDetalle(id) {
+                try {
+                    const response = await fetch('/api/productos/' + id);
+                    const producto = await response.json();
+                    
+                    let html = '<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 30px; align-items: start;">';
+                    
+                    // Imagen de listado
+                    html += '<div><h4 style="margin-bottom: 12px; color: #2d5be3;">📸 Imagen Listado</h4>';
+                    if (producto.imagen_listado && producto.imagen_listado.trim() !== '') {
+                        html += `<div id="img-listado" style="width: 100%; height: 300px; background: #f9fafd; border-radius: 12px; display: flex; align-items: center; justify-content: center;">
+                                    <img src="/ver-ruta/${producto.imagen_listado}" style="width: 100%; height: 100%; object-fit: contain; border-radius: 12px; border: 1px solid #e0e0e0; display: block;">
+                                </div>`;
+                    } else {
+                        html += '<div style="width: 100%; height: 300px; background: #f9fafd; border: 2px dashed #d0d0d0; border-radius: 12px; display: flex; align-items: center; justify-content: center; color: #999; font-size: 1em;">Sin imagen</div>';
+                    }
+                    html += '</div>';
+                    
+                    // Imagen de características
+                    html += '<div><h4 style="margin-bottom: 12px; color: #2d5be3;">📸 Imagen Características</h4>';
+                    if (producto.imagen_caracteristicas && producto.imagen_caracteristicas.trim() !== '') {
+                        html += `<div id="img-caracteristicas" style="width: 100%; height: 300px; background: #f9fafd; border-radius: 12px; display: flex; align-items: center; justify-content: center;">
+                                    <img src="/ver-ruta/${producto.imagen_caracteristicas}" style="width: 100%; height: 100%; object-fit: contain; border-radius: 12px; border: 1px solid #e0e0e0; display: block;">
+                                </div>`;
+                    } else {
+                        html += '<div style="width: 100%; height: 300px; background: #f9fafd; border: 2px dashed #d0d0d0; border-radius: 12px; display: flex; align-items: center; justify-content: center; color: #999; font-size: 1em;">Sin imagen</div>';
+                    }
+                    html += '</div>';
+                    
+                    html += '</div>';
+                    
+                    // Información del producto
+                    html += '<div style="margin-top: 30px; padding-top: 30px; border-top: 1px solid #e0e0e0;">';
+                    html += `<h4 style="color: #2d5be3; margin-bottom: 15px;">📋 Información del Producto</h4>`;
+                    html += `<table style="width: 100%; border-collapse: collapse;">
+                        <tr style="border-bottom: 1px solid #e0e0e0;">
+                            <td style="padding: 10px 0; font-weight: 600; width: 150px;">Código:</td>
+                            <td style="padding: 10px 0;">${producto.codigo}</td>
+                        </tr>
+                        <tr style="border-bottom: 1px solid #e0e0e0;">
+                            <td style="padding: 10px 0; font-weight: 600;">Nombre:</td>
+                            <td style="padding: 10px 0;">${producto.nombre}</td>
+                        </tr>
+                        <tr style="border-bottom: 1px solid #e0e0e0;">
+                            <td style="padding: 10px 0; font-weight: 600;">Precio:</td>
+                            <td style="padding: 10px 0; color: #2d5be3; font-weight: 700;">S/. ${producto.precio.toFixed(2)}</td>
+                        </tr>
+                        <tr style="border-bottom: 1px solid #e0e0e0;">
+                            <td style="padding: 10px 0; font-weight: 600;">Categoría:</td>
+                            <td style="padding: 10px 0;">${producto.categoria}</td>
+                        </tr>
+                        <tr style="border-bottom: 1px solid #e0e0e0;">
+                            <td style="padding: 10px 0; font-weight: 600;">Segmento:</td>
+                            <td style="padding: 10px 0;">${producto.segmento.toUpperCase()}</td>
+                        </tr>
+                        <tr style="border-bottom: 1px solid #e0e0e0;">
+                            <td style="padding: 10px 0; font-weight: 600;">Estado:</td>
+                            <td style="padding: 10px 0;">${producto.estado}</td>
+                        </tr>
+                        <tr style="border-bottom: 1px solid #e0e0e0;">
+                            <td style="padding: 10px 0; font-weight: 600;">Mes:</td>
+                            <td style="padding: 10px 0;">${producto.mes}</td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 10px 0; font-weight: 600;">Descripción:</td>
+                            <td style="padding: 10px 0;">${producto.descripcion || 'N/A'}</td>
+                        </tr>
+                    </table>`;
+                    html += '</div>';
+                    
+                    // Modal de detalle
+                    const modal = document.createElement('div');
+                    modal.className = 'modal show';
+                    modal.id = 'detalleModal';
+                    modal.style.zIndex = '1100';
+                    modal.innerHTML = `
+                        <div class="modal-content" style="max-width: 1000px; max-height: 90vh; overflow-y: auto;">
+                            <span class="close" onclick="document.getElementById('detalleModal').remove()">&times;</span>
+                            <h2>👁️ Detalle del Producto</h2>
+                            ${html}
+                        </div>
+                    `;
+                    document.body.appendChild(modal);
+                    
+                    // Manejar errores de carga de imagen después de insertar en el DOM
+                    setTimeout(() => {
+                        const imgs = modal.querySelectorAll('img');
+                        imgs.forEach(img => {
+                            img.addEventListener('error', function() {
+                                const parentDiv = this.parentElement;
+                                if (parentDiv) {
+                                    parentDiv.innerHTML = '<div style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; color: #999; border: 2px dashed #d0d0d0; border-radius: 12px;">Sin imagen</div>';
+                                }
+                            });
+                        });
+                    }, 0);
+                } catch(e) {
+                    mostrarAlerta('❌ Error: ' + e.message, 'error');
                 }
             }
 
