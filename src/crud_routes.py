@@ -589,7 +589,7 @@ async def admin_panel():
                             const segmentoColor = p.segmento === 'fnb' ? '#cfe2ff' : '#fff3cd';
                             const segmentoTextColor = p.segmento === 'fnb' ? '#084298' : '#664d03';
                             
-                            const imagenUrl = p.imagen_listado ? '/ver-ruta/' + p.imagen_listado : '';
+                            const imagenUrl = p.imagen_listado ? p.imagen_listado : '';
                             
                             const card = document.createElement('div');
                             card.className = 'producto-card';
@@ -647,7 +647,7 @@ async def admin_panel():
                     html += '<div><h4 style="margin-bottom: 12px; color: #2d5be3;">📸 Imagen Listado</h4>';
                     if (producto.imagen_listado && producto.imagen_listado.trim() !== '') {
                         html += `<div id="img-listado" style="width: 100%; height: 300px; background: #f9fafd; border-radius: 12px; display: flex; align-items: center; justify-content: center;">
-                                    <img src="/ver-ruta/${producto.imagen_listado}" style="width: 100%; height: 100%; object-fit: contain; border-radius: 12px; border: 1px solid #e0e0e0; display: block;">
+                                    <img src="${producto.imagen_listado}" style="width: 100%; height: 100%; object-fit: contain; border-radius: 12px; border: 1px solid #e0e0e0; display: block;">
                                 </div>`;
                     } else {
                         html += '<div style="width: 100%; height: 300px; background: #f9fafd; border: 2px dashed #d0d0d0; border-radius: 12px; display: flex; align-items: center; justify-content: center; color: #999; font-size: 1em;">Sin imagen</div>';
@@ -658,7 +658,7 @@ async def admin_panel():
                     html += '<div><h4 style="margin-bottom: 12px; color: #2d5be3;">📸 Imagen Características</h4>';
                     if (producto.imagen_caracteristicas && producto.imagen_caracteristicas.trim() !== '') {
                         html += `<div id="img-caracteristicas" style="width: 100%; height: 300px; background: #f9fafd; border-radius: 12px; display: flex; align-items: center; justify-content: center;">
-                                    <img src="/ver-ruta/${producto.imagen_caracteristicas}" style="width: 100%; height: 100%; object-fit: contain; border-radius: 12px; border: 1px solid #e0e0e0; display: block;">
+                                    <img src="${producto.imagen_caracteristicas}" style="width: 100%; height: 100%; object-fit: contain; border-radius: 12px; border: 1px solid #e0e0e0; display: block;">
                                 </div>`;
                     } else {
                         html += '<div style="width: 100%; height: 300px; background: #f9fafd; border: 2px dashed #d0d0d0; border-radius: 12px; display: flex; align-items: center; justify-content: center; color: #999; font-size: 1em;">Sin imagen</div>';
