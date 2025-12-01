@@ -20,13 +20,40 @@ Un servidor completo para gestionar catálogos de productos con imágenes, panel
 
 ## 🚀 Instalación Rápida
 
-### 1. Instalar Dependencias
+### 1. Crear y Activar Entorno Virtual (VENV)
+
+#### En Windows (CMD o PowerShell):
+
+```bash
+# Crear entorno virtual
+python -m venv venv
+
+# Activar entorno virtual (CMD)
+venv\Scripts\activate
+
+# Activar entorno virtual (PowerShell)
+venv\Scripts\Activate.ps1
+```
+
+#### En macOS/Linux:
+
+```bash
+# Crear entorno virtual
+python3 -m venv venv
+
+# Activar entorno virtual
+source venv/bin/activate
+```
+
+Deberías ver `(venv)` al principio del prompt cuando esté activado.
+
+### 2. Instalar Dependencias
 
 ```bash
 pip install -r requirements.txt
 ```
 
-### 2. Ejecutar el Servidor
+### 3. Ejecutar el Servidor
 
 ```bash
 python main.py
@@ -39,7 +66,41 @@ INFO:     Uvicorn running on http://0.0.0.0:8000
 
 La base de datos SQLite se crea automáticamente en `catalogos.db`
 
-### 3. Acceder a la Interfaz
+### 4. Desactivar Entorno Virtual (cuando termines)
+
+```bash
+# En Windows, macOS o Linux
+deactivate
+```
+
+## 🐍 Gestión del VENV
+
+### Ver paquetes instalados
+```bash
+pip list
+```
+
+### Actualizar pip
+```bash
+python -m pip install --upgrade pip
+```
+
+### Generar archivo requirements.txt actualizado
+```bash
+pip freeze > requirements.txt
+```
+
+### Instalar paquete específico
+```bash
+pip install nombre_paquete
+```
+
+### Limpiar caché de pip
+```bash
+pip cache purge
+```
+
+### Acceder a la Interfaz
 
 - **Panel Admin**: http://localhost:8000/api/admin
 - **API Docs**: http://localhost:8000/docs
@@ -176,6 +237,45 @@ GET /ver-ruta/catalogos/fnb/2025/11-noviembre/1-celulares/precios/01.png
 - Rate limiting
 
 ## 🐛 Solución de Problemas
+
+### VENV: Comando "python" o "pip" no encontrado
+
+**Problema:** Recibes error como `'python' is not recognized`
+
+**Solución:**
+1. Asegúrate de que el VENV esté activado (debe ver `(venv)` en el prompt)
+2. Si sigue sin funcionar, reinicia el terminal
+3. En Windows PowerShell, puede necesitar ejecutar primero:
+   ```powershell
+   Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
+   ```
+
+### VENV: "Scripts\activate" no existe
+
+**Problema:** El comando de activación falla
+
+**Solución:**
+```bash
+# Verificar que venv existe
+ls venv\Scripts\
+
+# Si no existe, crear nuevamente
+python -m venv venv
+venv\Scripts\activate
+```
+
+### VENV: Conflicto de versiones de Python
+
+**Problema:** Tienes múltiples versiones de Python instaladas
+
+**Solución:**
+```bash
+# Especificar versión al crear venv
+python3.9 -m venv venv
+
+# O usar py.exe (Windows)
+py -3.9 -m venv venv
+```
 
 ### Las imágenes no se muestran
 - Verifica que la ruta en base de datos sea correcta

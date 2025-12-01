@@ -232,12 +232,13 @@ class CatalogoManager:
         self.segmentos: Dict[str, SegmentoCatalogo] = {}
 
         # Mapeo de categorías (compartido por todos los segmentos)
+        # Las claves son nombres de carpetas en imagenes/, valores son nombres en BD
         self.categoria_map = {
-            "1-celulares": "CELULARES",
-            "2-laptops": "LAPTOPS",
-            "3-televisores": "TELEVISORES",
-            "4-refrigeradoras": "REFRIGERADORAS",
-            "5-lavadoras": "LAVADORAS",
+            "1-celulares": "celulares",
+            "2-laptops": "laptops",
+            "3-televisores": "televisores",
+            "4-refrigeradoras": "refrigeradoras",
+            "5-lavadoras": "lavadoras",
         }
 
         # Crear instancias de cada segmento
