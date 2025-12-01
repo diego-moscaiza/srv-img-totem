@@ -1,23 +1,185 @@
-# Endpoints de Imágenes - Documentación
+# 🖼️ Endpoints de Imágenes - Documentación Actualizada
 
-## Resumen de endpoints para recuperar imágenes de productos y características
+## Resumen Rápido
 
-### 1. **Endpoint Principal de Producto (JSON con URLs)**
+La aplicación sirve imágenes desde la carpeta `imagenes/catalogos/` usando el endpoint principal:
+
 ```
-GET /api/producto/{año}/{mes}/{categoria}/{producto_id}
+GET /ver-ruta/{ruta:path}
 ```
-Retorna los detalles completos del producto incluyendo:
-- Datos del producto (precio, nombre, descripción, etc.)
-- Objeto `urls` con 4 URLs de imagen:
-  - `imagen_lista`: Endpoint para obtener imagen del producto
-  - `imagen_caracteristicas`: Endpoint para obtener imagen de características
-  - `imagen_directa`: Ruta directa vía `/static`
-  - `caracteristicas_directa`: Ruta directa vía `/static`
 
-**Ejemplo:**
+## Endpoint Principal
+
+### `/ver-ruta/{ruta:path}`
+
+**Descripción**: Sirve cualquier imagen desde la ruta relativa a `imagenes/`
+
+**Método**: GET
+
+**Parámetro**: `{ruta:path}` - Ruta relativa a carpeta `imagenes/`
+
+**Ejemplo de uso:**
+
+```
+GET /ver-ruta/catalogos/2025/fnb/noviembre/1-celulares/listado/01.png
+GET /ver-ruta/catalogos/2025/fnb/noviembre/1-celulares/caracteristicas/00.png
+```
+
+**URL Completa:**
+
+```
+http://localhost:8000/ver-ruta/catalogos/2025/fnb/noviembre/1-celulares/listado/01.png
+```
+
+**Respuesta:**
+- ✅ 200 OK - Imagen PNG/JPG servida
+- ❌ 500 Error - Archivo no existe
+
+**Fallback**: Cuando la imagen no existe, se muestra placeholder "Sin imagen" en el frontend
+
+## Estructura de Directorios
+
+```
+imagenes/
+└── catalogos/
+    └── 2025/
+        └── fnb/
+            └── noviembre/
+                └── 1-celulares/
+                    ├── listado/
+                    │   ├── 01.png
+                    │   ├── 02.png
+                    │   └── ...
+                    └── caracteristicas/
+                        ├── 00.png
+                        ├── 01.png
+                        └── ...
+```
+
+## Uso en Base de Datos
+
+En la tabla `productos`, los campos de imagen almacenan rutas relativas:
+
+```sql
+imagen_listado: "catalogos/2025/fnb/noviembre/1-celulares/listado/01.png"
+imagen_caracteristicas: "catalogos/2025/fnb/noviembre/1-celulares/caracteristicas/00.png"
+```
+
+Al servir, se construye la URL:
+```
+/ver-ruta/{valor_imagen}
+```
+
+## Ejemplo Completo
+
+### 1. Crear producto con imágenes
+
 ```bash
-curl http://localhost:8000/api/producto/2025/noviembre/CELULARES/1
+curl -X POST http://localhost:8000/api/productos \
+  -H "Content-Type: application/json" \
+  -d '{
+    "codigo": "CELCEL0091",
+    "nombre": "Samsung Galaxy A06",
+    "descripcion": "128 GB - 4 GB RAM",
+    "precio": 949.00,
+    "categoria": "celulares",
+    "segmento": "fnb",
+    "estado": "disponible",
+    "stock": 50,
+    "imagen_listado": "catalogos/2025/fnb/noviembre/1-celulares/listado/01.png",
+    "imagen_caracteristicas": "catalogos/2025/fnb/noviembre/1-celulares/caracteristicas/00.png",
+    "cuotas": {"3": 338.85, "6": 178.87, "12": 99.24},
+    "mes": "noviembre",
+    "ano": 2025
+  }'
 ```
+
+### 2. Obtener producto
+
+```bash
+curl http://localhost:8000/api/productos/1
+```
+
+**Respuesta:**
+```json
+{
+  "id": 1,
+  "codigo": "CELCEL0091",
+  "nombre": "Samsung Galaxy A06",
+  ...
+  "imagen_listado": "catalogos/2025/fnb/noviembre/1-celulares/listado/01.png",
+  "imagen_caracteristicas": "catalogos/2025/fnb/noviembre/1-celulares/caracteristicas/00.png"
+}
+```
+
+### 3. Servir imagen en HTML
+
+```html
+<!-- Galería (miniatura 180px) -->
+<img src="/ver-ruta/catalogos/2025/fnb/noviembre/1-celulares/listado/01.png" 
+     alt="Samsung Galaxy A06"
+     style="width: 100%; height: 180px; object-fit: contain;">
+
+<!-- Detalle (grande 300px) -->
+<img src="/ver-ruta/catalogos/2025/fnb/noviembre/1-celulares/caracteristicas/00.png"
+     alt="Características"
+     style="width: 100%; height: 300px; object-fit: contain;">
+```
+
+### 4. Manejo de errores
+
+```javascript
+// Cuando imagen no carga
+img.onerror = function() {
+  this.parentElement.innerHTML = 
+    '<div style="width: 100%; height: 300px; ' +
+    'display: flex; align-items: center; ' +
+    'justify-content: center; border: 2px dashed #d0d0d0;">'+
+    'Sin imagen</div>';
+};
+```
+
+## Requerimientos
+
+✅ Archivo debe existir en la ruta especificada
+✅ Formato soportado: PNG, JPG, JPEG, GIF, BMP, WEBP
+✅ La ruta es relativa a carpeta `imagenes/`
+
+## Formatos Soportados
+
+- `.png`
+- `.jpg` / `.jpeg`
+- `.gif`
+- `.bmp`
+- `.webp`
+
+## Solución de Problemas
+
+**Error 500 - Imagen no encontrada**
+```
+Solución: Verifica que el archivo exista en:
+  imagenes/{ruta_especificada}
+```
+
+**Ruta incorrecta**
+```
+Incorrecto: /ver-ruta/imagenes/catalogos/...
+Correcto:   /ver-ruta/catalogos/...
+(No incluir "imagenes/" al inicio)
+```
+
+**Imagen corrupta**
+```
+- Verifica integridad del archivo
+- Reinicia servidor
+- Limpia caché del navegador (Ctrl+F5)
+```
+
+---
+
+**Versión**: 2.1.0
+**Última actualización**: Diciembre 2025
+**Estado**: 🟢 Funcional
 
 ---
 
