@@ -1,56 +1,55 @@
-# Configuración de Base de Datos SQLite
+# 🗄️ Configuración SQLite - Guía Completa
 
 ## ¿Por qué SQLite?
 
-- ✅ **Sin servidor externo** - No necesitas instalar PostgreSQL
-- ✅ **Cero configuración** - Todo funciona automáticamente
-- ✅ **Portátil** - Base de datos es un simple archivo `catalogos.db`
-- ✅ **Desarrollo rápido** - Perfecto para prototipado y desarrollo
-- ✅ **Perfecto para este proyecto** - Catálogos con datos relativamente estáticos
+✅ **Ventajas**
+- 📦 **Sin dependencias externas** - SQLite viene con Python
+- ⚡ **Instalación instantánea** - Solo `pip install`
+- 🔒 **Archivo único** - Fácil de respaldar y transportar
+- 🚀 **Rendimiento** - Excelente para aplicaciones pequeñas-medianas
+- 🎯 **Zero config** - La BD se crea sola en la primera ejecución
+- 🌍 **Multiplataforma** - Windows, Mac, Linux
 
-## Instalación (Super Fácil)
+⚠️ **Limitaciones**
+- 📊 Millones de registros pueden ser lentos
+- 🔗 No es ideal para aplicaciones distribuidas complejas
+- 👥 Concurrencia limitada (bloqueos)
 
-### 1. Instalar Dependencias
+## 📦 Instalación
 
+### 1. Clonar o descargar el proyecto
+```bash
+cd "c:\Users\Diego Moscaiza\Downloads\Servidores Para BOT\srv-img-totem"
+```
+
+### 2. Crear entorno virtual
+```bash
+python -m venv venv
+.\venv\Scripts\activate
+```
+
+### 3. Instalar dependencias
 ```bash
 pip install -r requirements.txt
 ```
 
-Esto instalará:
-- sqlalchemy==2.0.23
-- fastapi y sus dependencias
-- uvicorn para servir la aplicación
+**Dependencias principales**:
+- `fastapi==0.122.0` - Framework web
+- `sqlalchemy==2.0.44` - ORM para BD
+- `uvicorn==0.27.0` - Servidor ASGI
+- `python-multipart==0.0.6` - Para formularios
 
-**Nota:** No necesitas psycopg2 ni PostgreSQL instalado
-
-### 2. Ejecutar el Servidor
-
+### 4. Ejecutar servidor
 ```bash
 python main.py
 ```
 
-¡Eso es todo! Deberías ver:
-
+**Salida esperada**:
 ```
-INFO:     Uvicorn running on http://0.0.0.0:8000
-INFO:     Application startup complete.
+INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
 ```
 
-La base de datos SQLite (`catalogos.db`) se creará automáticamente en el mismo directorio.
-
-### 3. Acceder al Panel Admin
-
-Una vez que el servidor esté ejecutándose, accede a:
-
-```
-http://localhost:8000/admin
-```
-
-Aquí puedes:
-- ✅ Crear nuevos productos
-- ✅ Ver todos los productos
-- ✅ Editar productos existentes
-- ✅ Eliminar productos
+**¡Listo!** La BD `catalogos.db` se crea automáticamente.
 
 ## Estructura de la Base de Datos
 
