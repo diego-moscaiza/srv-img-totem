@@ -1314,7 +1314,8 @@
             const ano = modal.querySelector('select[name="ano"]').value;
             const mes = modal.querySelector('select[name="mes"]').value;
             const categoria = modal.querySelector('select[name="categoria"]').value;
-            await cargarImagenesDisponibles(segmento, ano, mes, categoria);
+            // NO pasar categoría al endpoint - se filtrará localmente
+            await cargarImagenesDisponibles(segmento, ano, mes);
             
             // Actualizar selects de imágenes
             actualizarSelectImagenesEnModal(modal);
@@ -1323,8 +1324,8 @@
             const segmentoActual = modal.querySelector('select[name="segmento"]').value;
             const anoActual = modal.querySelector('select[name="ano"]').value;
             const mesActual = modal.querySelector('select[name="mes"]').value;
-            const categoriaActual = producto.categoria;
-            await cargarImagenesDisponibles(segmentoActual, anoActual, mesActual, categoriaActual);
+            // NO pasar categoría al endpoint
+            await cargarImagenesDisponibles(segmentoActual, anoActual, mesActual);
             actualizarSelectImagenesEnModal(modal);
             
             // Event listeners para filtros
@@ -1334,8 +1335,8 @@
                     const seg = modal.querySelector('select[name="segmento"]').value;
                     const an = modal.querySelector('select[name="ano"]').value;
                     const m = modal.querySelector('select[name="mes"]').value;
-                    const cat = modal.querySelector('select[name="categoria"]').value;
-                    await cargarImagenesDisponibles(seg, an, m, cat);
+                    // NO pasar categoría al endpoint - se filtrará localmente
+                    await cargarImagenesDisponibles(seg, an, m);
                     actualizarSelectImagenesEnModal(modal);
                 });
             });
@@ -1383,24 +1384,65 @@
         function actualizarSelectImagenesEnModal(modal) {
             const selectListado = modal.querySelector('select[name="imagen_listado"]');
             const selectCaracteristicas = modal.querySelector('select[name="imagen_caracteristicas"]');
+            const selectCategoria = modal.querySelector('select[name="categoria"]');
+            
+            // Obtener la categoría seleccionada (puede ser vacío)
+            const categoriaSeleccionada = selectCategoria?.value?.toLowerCase().trim() || null;
+            
+            console.log('🖼️ Modal: Actualizando select de imágenes');
+            console.log('   Categoría seleccionada:', categoriaSeleccionada);
             
             if (selectListado && imagenesDisponibles.listado) {
                 let options = '<option value="' + (productoEnEdicion.imagen_listado || '') + '">' + (productoEnEdicion.imagen_listado || 'Seleccionar...') + '</option>';
+                let imagenesEncontradas = 0;
+                
                 for (const [key, imagenes] of Object.entries(imagenesDisponibles.listado)) {
+                    // Si hay categoría seleccionada, filtrar por ella
+                    if (categoriaSeleccionada) {
+                        const partes = key.split('/');
+                        const categoriaCarpeta = partes[partes.length - 1]; // "1-celulares"
+                        const categoriaClave = categoriaCarpeta.split('-').slice(1).join('-').toLowerCase(); // "celulares"
+                        
+                        // Solo incluir si coincide la categoría
+                        if (categoriaClave !== categoriaSeleccionada) {
+                            continue;
+                        }
+                    }
+                    
                     imagenes.forEach(img => {
                         options += `<option value="${img.url}">${key} - ${img.nombre}</option>`;
+                        imagenesEncontradas++;
                     });
                 }
+                
+                console.log(`✅ Modal - Imágenes de listado encontradas: ${imagenesEncontradas}`);
                 selectListado.innerHTML = options;
             }
             
             if (selectCaracteristicas && imagenesDisponibles.caracteristicas) {
                 let options = '<option value="' + (productoEnEdicion.imagen_caracteristicas || '') + '">' + (productoEnEdicion.imagen_caracteristicas || 'Seleccionar...') + '</option>';
+                let imagenesEncontradas = 0;
+                
                 for (const [key, imagenes] of Object.entries(imagenesDisponibles.caracteristicas)) {
+                    // Si hay categoría seleccionada, filtrar por ella
+                    if (categoriaSeleccionada) {
+                        const partes = key.split('/');
+                        const categoriaCarpeta = partes[partes.length - 1];
+                        const categoriaClave = categoriaCarpeta.split('-').slice(1).join('-').toLowerCase();
+                        
+                        // Solo incluir si coincide la categoría
+                        if (categoriaClave !== categoriaSeleccionada) {
+                            continue;
+                        }
+                    }
+                    
                     imagenes.forEach(img => {
                         options += `<option value="${img.url}">${key} - ${img.nombre}</option>`;
+                        imagenesEncontradas++;
                     });
                 }
+                
+                console.log(`✅ Modal - Imágenes de características encontradas: ${imagenesEncontradas}`);
                 selectCaracteristicas.innerHTML = options;
             }
         }
