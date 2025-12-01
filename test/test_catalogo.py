@@ -2,13 +2,25 @@
 """
 Script de prueba para verificar que el CatalogoManager carga correctamente
 los productos desde los archivos JSON y no devuelve datos hardcodeados
+
+Uso:
+  cd srv-img-totem
+  python test/test_catalogo.py
 """
 
+import sys
 import json
-from catalogos_manager import catalogo_manager
+from pathlib import Path
+
+# Agregar directorio padre al path para importar desde src
+sys.path.insert(0, str(Path(__file__).parent.parent))
+
+from src.catalogos_manager import CatalogoManager
+
+catalogo_manager = CatalogoManager()
 
 print("=" * 80)
-print("PRUEBA DE CARGA DE CATÁLOGOS DESDE JSON")
+print("PRUEBA DE CARGA DE CATÁLOGOS DESDE BD")
 print("=" * 80)
 
 # Prueba 1: Detectar catálogo actual
@@ -17,8 +29,8 @@ print("-" * 80)
 catalogo_actual = catalogo_manager.detectar_catalogo_actual()
 print(f"Año: {catalogo_actual['año']}")
 print(f"Mes: {catalogo_actual['mes']}")
-print(f"Ruta: {catalogo_actual['ruta_base']}")
-print(f"Existe: {catalogo_actual['existe']}")
+print(f"Mes (número): {catalogo_actual['mes_numero']}")
+print(f"Segmento: {catalogo_actual['segmento']}")
 
 # Prueba 2: Obtener meses disponibles
 print("\n📅 PRUEBA 2: Meses disponibles")
@@ -31,7 +43,7 @@ for mes_info in meses:
     )
 
 # Prueba 3: Cargar catálogo del mes actual
-print("\n📦 PRUEBA 3: Cargar catálogo actual (REAL desde JSON)")
+print("\n📦 PRUEBA 3: Cargar catálogo actual (REAL desde BD)")
 print("-" * 80)
 catalogo = catalogo_manager.cargar_catalogo_mes(
     catalogo_actual["año"], catalogo_actual["mes"]
@@ -48,12 +60,8 @@ for categoria, productos in catalogo.items():
             print(f"     ID: {producto.get('id', 'N/A')}")
             print(f"     Nombre: {producto.get('nombre', 'N/A')}")
             print(f"     Precio: {producto.get('precio', 'N/A')}")
-            print(f"     Imagen: {producto.get('imagen', 'N/A')}")
             print(
-                f"     Ruta imagen (relativa): {producto.get('ruta_imagen_relativa', 'N/A')}"
-            )
-            print(
-                f"     Ruta imagen (absoluta): {producto.get('ruta_imagen_absoluta', 'N/A')}"
+                f"     Imagen: {producto.get('imagen', 'N/A')[:50] if producto.get('imagen') else 'N/A'}..."
             )
             print(f"     Stock: {producto.get('stock', 'N/A')}")
             print(f"     Categoría: {producto.get('categoria', 'N/A')}")
