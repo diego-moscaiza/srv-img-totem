@@ -4,14 +4,14 @@ Un servidor completo para gestionar catálogos de productos con imágenes, panel
 
 ## ✨ Características Principales
 
-✅ **Gestión de Catálogos** - Organización por año, mes y categoría
-✅ **Panel Admin Moderno** - Interfaz web responsiva con galería de productos
-✅ **Servicio de Imágenes** - Listado (180px) y características (300px) de productos
-✅ **Base de Datos SQLite** - Almacenamiento persistente sin servidor externo
-✅ **Segmentación** - FNB (Financiamiento No Bancario) y GASO (Gaso doméstico)
-✅ **Estados de Producto** - Disponible / Agotado
-✅ **API REST** - Endpoints CRUD para integración con otras aplicaciones
-✅ **Galería Interactiva** - Vista de cards con modal de detalle
+- ✅ **Gestión de Catálogos** - Organización por año, mes y categoría
+- ✅ **Panel Admin Moderno** - Interfaz web responsiva con galería de productos
+- ✅ **Servicio de Imágenes** - Listado (180px) y características (300px) de productos
+- ✅ **Base de Datos SQLite** - Almacenamiento persistente sin servidor externo
+- ✅ **Segmentación** - FNB (Financiamiento No Bancario) y GASO (Gaso doméstico)
+- ✅ **Estados de Producto** - Disponible / Agotado
+- ✅ **API REST** - Endpoints CRUD para integración con otras aplicaciones
+- ✅ **Galería Interactiva** - Vista de cards con modal de detalle
 
 ## 📦 Requisitos Previos
 
