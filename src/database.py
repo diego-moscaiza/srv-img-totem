@@ -22,6 +22,7 @@ class Producto(Base):
     categoria = Column(String(100))
     imagen_listado = Column(String(500))
     imagen_caracteristicas = Column(String(500))
+    imagen_caracteristicas_2 = Column(String(500), nullable=True, default=None)
     cuotas = Column(JSON)  # {"3": 338.85, "6": 178.87, ...}
     mes = Column(String(20))
     ano = Column(Integer)
