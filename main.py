@@ -8,6 +8,7 @@ from src.catalogos_manager import CatalogoManager
 from src.database import Producto as DBProducto, SessionLocal, engine
 from src.database import Base
 from src.schemas import Producto, ProductoCreate, ProductoUpdate
+from src.config import SERVER_URL, IMAGENES_DIR
 
 # Crear instancia del gestor de catálogos
 catalogo_mgr = CatalogoManager()
@@ -30,8 +31,7 @@ app = FastAPI(
     version="2.0.0",
 )
 
-# Directorio base de imágenes
-IMAGENES_DIR = "imagenes"
+# Directorio base de imágenes (ya importado desde config)
 Path(IMAGENES_DIR).mkdir(exist_ok=True)
 
 
@@ -61,9 +61,19 @@ async def root():
                 "meses_disponibles": "/api/meses-disponibles",
             },
             "productos": {
+                "listar_todos": "/api/productos",
+                "obtener_uno": "/api/productos/{producto_id}",
+                "crear": "POST /api/productos",
+                "actualizar": "PUT /api/productos/{producto_id}",
+                "eliminar": "DELETE /api/productos/{producto_id}",
                 "producto_detallado": "/api/catalogo/{segmento}/{año}/{mes}/{categoria}/{producto_id}",
-                "imagen_caracteristicas": "/api/imagen/{segmento}/{año}/{mes}/{categoria}/{producto_id}/caracteristicas",
-                "imagen_listado": "/api/imagen/{segmento}/{año}/{mes}/{categoria}/{producto_id}/listado",
+                "obtener_imagen": "/api/imagen/{segmento}/{año}/{mes}/{categoria}/{producto_id}/{tipo_imagen}",
+                "nota_tipos_imagen": "tipo_imagen: 'caracteristicas' o 'precios'",
+            },
+            "imagenes": {
+                "por_nombre": "/ver/{nombre_archivo}",
+                "por_ruta_catalogos": "/api/catalogos/{ruta_completa}",
+                "por_ruta_legacy": "/ver-ruta/{ruta_completa}",
             },
             "pdfs": {
                 "pdf_categoria": "/api/pdf/{segmento}/{año}/{mes}/{categoria}",
@@ -71,20 +81,22 @@ async def root():
                 "pdf_categoria_activo": "/api/pdf/{segmento}/activo/{categoria}",
                 "pdfs_mes_activo": "/api/pdfs/{segmento}/activo",
             },
+            "admin": {
+                "panel": "/api/admin",
+                "validar_producto": "POST /api/validar-producto",
+            },
+            "utilidades": {
+                "diagnostico": "/diagnostico",
+            },
             "ejemplos": {
                 "catalogo_fnb_activo": "/api/catalogo/fnb/activo",
-                "catalogo_gaso_noviembre_2025": "/api/catalogo/gaso/2025/noviembre",
-                "celulares_gaso": "/api/catalogo/gaso/2025/noviembre/celulares",
-                "producto_especifico": "/api/catalogo/fnb/2025/noviembre/celulares/CELCEL0091",
+                "catalogo_gaso_noviembre_2025": "/api/catalogo/gaso/2025/11-noviembre",
+                "celulares_gaso": "/api/catalogo/gaso/2025/11-noviembre/1-celulares",
+                "producto_especifico": "/api/catalogo/fnb/2025/11-noviembre/1-celulares/CELCEL0091",
+                "imagen_con_ruta": "/ver-ruta/catalogos/fnb/2025/11-noviembre/1-celulares/caracteristicas/01.png",
             },
         },
     }
-
-
-@app.get("/admin", response_class=HTMLResponse)
-async def admin_redirect():
-    """Redirección al panel de admin"""
-    return RedirectResponse(url="/api/admin")
 
 
 @app.get("/api/segmentos")
@@ -102,12 +114,6 @@ async def obtener_segmentos():
         raise HTTPException(
             status_code=500, detail=f"Error al obtener segmentos: {str(e)}"
         )
-
-
-@app.get("/admin", response_class=HTMLResponse)
-async def admin_redirect():
-    """Redirección al panel de admin"""
-    return RedirectResponse(url="/api/admin")
 
 
 @app.get("/api/catalogo/{segmento}/activo")
@@ -491,6 +497,25 @@ async def ver_imagen_con_ruta(ruta: str):
             raise HTTPException(status_code=400, detail="Ruta inválida")
 
         return FileResponse(ruta_imagen)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error al cargar imagen: {str(e)}")
+
+
+@app.get("/api/catalogos/{ruta:path}")
+async def obtener_imagen_catalogo(ruta: str):
+    """Obtiene imágenes de catálogos desde /api/catalogos/..."""
+    try:
+        ruta_imagen = Path(IMAGENES_DIR) / "catalogos" / ruta
+
+        if not ruta_imagen.exists():
+            raise HTTPException(status_code=404, detail=f"Imagen no encontrada: {ruta}")
+
+        if not ruta_imagen.is_file():
+            raise HTTPException(status_code=400, detail="Ruta inválida")
+
+        return FileResponse(ruta_imagen)
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error al cargar imagen: {str(e)}")
 
