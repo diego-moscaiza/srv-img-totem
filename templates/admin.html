@@ -806,22 +806,36 @@
 
         // Actualizar select de imágenes - MEJORADO
         function actualizarSelectImagenes() {
-            const selectListado = document.querySelector('select[name="imagen_listado"]');
-            const selectCaracteristicas = document.querySelector('select[name="imagen_caracteristicas"]');
-            const selectCategoria = document.querySelector('select[name="categoria"]');
+            // 🎯 BUSCAR ESPECÍFICAMENTE EN EL FORMULARIO DE CREAR
+            const crearForm = document.getElementById('crearForm');
+            if (!crearForm) {
+                console.error('❌ actualizarSelectImagenes: No se encontró crearForm');
+                return;
+            }
+            
+            const selectListado = crearForm.querySelector('select[name="imagen_listado"]');
+            const selectCaracteristicas = crearForm.querySelector('select[name="imagen_caracteristicas"]');
+            const selectCategoria = crearForm.querySelector('select[name="categoria"]');
             
             // Obtener la categoría seleccionada (puede ser vacío)
             const categoriaSeleccionada = selectCategoria?.value?.toLowerCase().trim() || null;
             
-            console.log('🖼️ Actualizando select de imágenes');
+            console.log('🖼️ [CREAR] Actualizando select de imágenes');
             console.log('   Categoría seleccionada:', categoriaSeleccionada);
-            console.log('   Imágenes disponibles:', imagenesDisponibles);
+            console.log('   Estructura de imagenesDisponibles:', {
+                'listado': Object.keys(imagenesDisponibles.listado || {}).length + ' claves',
+                'caracteristicas': Object.keys(imagenesDisponibles.caracteristicas || {}).length + ' claves'
+            });
             
             if (selectListado && imagenesDisponibles.listado) {
                 let options = '<option value="">Seleccionar...</option>';
                 let imagenesEncontradas = 0;
                 
-                for (const [key, imagenes] of Object.entries(imagenesDisponibles.listado)) {
+                // Debug: mostrar todas las claves
+                const todasLasClaves = Object.entries(imagenesDisponibles.listado);
+                console.log('   📋 Claves de listado:', todasLasClaves.map(([k, v]) => `${k} (${v.length} imgs)`));
+                
+                for (const [key, imagenes] of todasLasClaves) {
                     // Si hay categoría seleccionada, filtrar por ella
                     if (categoriaSeleccionada) {
                         const partes = key.split('/');
@@ -841,15 +855,21 @@
                     });
                 }
                 
-                console.log(`✅ Imágenes de listado encontradas: ${imagenesEncontradas}`);
+                console.log(`✅ [CREAR] Imágenes de listado encontradas: ${imagenesEncontradas}`);
                 selectListado.innerHTML = options;
+            } else {
+                console.warn('⚠️ [CREAR] selectListado no encontrado o imagenesDisponibles.listado vacío');
             }
             
             if (selectCaracteristicas && imagenesDisponibles.caracteristicas) {
                 let options = '<option value="">Seleccionar...</option>';
                 let imagenesEncontradas = 0;
                 
-                for (const [key, imagenes] of Object.entries(imagenesDisponibles.caracteristicas)) {
+                // Debug: mostrar todas las claves
+                const todasLasClaves = Object.entries(imagenesDisponibles.caracteristicas);
+                console.log('   📋 Claves de características:', todasLasClaves.map(([k, v]) => `${k} (${v.length} imgs)`));
+                
+                for (const [key, imagenes] of todasLasClaves) {
                     // Si hay categoría seleccionada, filtrar por ella
                     if (categoriaSeleccionada) {
                         const partes = key.split('/');
@@ -869,12 +889,17 @@
                     });
                 }
                 
-                console.log(`✅ Imágenes de características encontradas: ${imagenesEncontradas}`);
+                console.log(`✅ [CREAR] Imágenes de características encontradas: ${imagenesEncontradas}`);
                 selectCaracteristicas.innerHTML = options;
+            } else {
+                console.warn('⚠️ [CREAR] selectCaracteristicas no encontrado o imagenesDisponibles.caracteristicas vacío');
             }
         }
 
         // Alternar secciones
+        // Flag para evitar duplicar listeners
+        let listenersCrearConfigurados = false;
+        
         function mostrarSeccion(seccion) {
             document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
             document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.remove('active'));
@@ -892,19 +917,16 @@
             });
             
             if (seccion === 'crear') {
-                setTimeout(() => {
-                    // Cargar todas las imágenes del mes/año/segmento seleccionado
-                    const selectSegmento = document.querySelector('select[name="segmento"]');
-                    const selectAno = document.querySelector('select[name="ano"]');
-                    const selectMes = document.querySelector('select[name="mes"]');
+                setTimeout(async () => {
+                    // Leer valores actuales de los selects
+                    const crearForm = document.getElementById('crearForm');
+                    const seg = crearForm?.querySelector('select[name="segmento"]')?.value || 'fnb';
+                    const an = crearForm?.querySelector('select[name="ano"]')?.value || '2025';
+                    const m = crearForm?.querySelector('select[name="mes"]')?.value || 'noviembre';
                     
-                    const segmento = selectSegmento?.value || null;
-                    const ano = selectAno?.value || null;
-                    const mes = selectMes?.value || null;
-                    
-                    // NO pasar categoría en la carga inicial
-                    cargarImagenesDisponibles(segmento, ano, mes);
-                    inicializarCarruselCrear(); // Esto configura listeners
+                    console.log('📌 mostrarSeccion(crear): Cargando imágenes con:', { seg, an, m });
+                    await cargarImagenesDisponibles(seg, an, m);
+                    inicializarCarruselCrear();
                 }, 100);
             } else if (seccion === 'listar') {
                 setTimeout(() => {
@@ -913,33 +935,49 @@
             }
         }
         
-        // Flag para controlar inicialización única de listeners
-        let listenersImagenesConfigurados = false;
-        
         function inicializarCarruselCrear() {
             const container = document.getElementById('crear-imagen-slider').parentElement;
             inicializarSlider(container);
             
-            // ✅ PREVENIR DUPLICACIÓN DE LISTENERS - Configurar solo una vez
-            if (listenersImagenesConfigurados) {
-                console.log('✅ Listeners ya configurados, saltando inicialización');
+            // 🛑 EVITAR DUPLICAR LISTENERS
+            if (listenersCrearConfigurados) {
+                console.log('⚠️ [CREAR] Listeners ya configurados, saltando...');
+                return;
+            }
+            
+            // 🎯 BUSCAR SELECTORES ESPECÍFICAMENTE EN EL FORMULARIO DE CREAR
+            const crearForm = document.getElementById('crearForm');
+            if (!crearForm) {
+                console.error('❌ No se encontró el formulario crearForm');
                 return;
             }
             
             // Event listeners para filtros de imágenes - MEJORADO
-            const selectSegmento = document.querySelector('select[name="segmento"]');
-            const selectAno = document.querySelector('select[name="ano"]');
-            const selectMes = document.querySelector('select[name="mes"]');
-            const selectCategoria = document.querySelector('select[name="categoria"]');
+            const selectSegmento = crearForm.querySelector('select[name="segmento"]');
+            const selectAno = crearForm.querySelector('select[name="ano"]');
+            const selectMes = crearForm.querySelector('select[name="mes"]');
+            const selectCategoria = crearForm.querySelector('select[name="categoria"]');
+            
+            console.log('📌 [CREAR] Selectores encontrados:', {
+                segmento: !!selectSegmento,
+                ano: !!selectAno,
+                mes: !!selectMes,
+                categoria: !!selectCategoria
+            });
             
             const actualizarImagenesFiltro = async () => {
                 const seg = selectSegmento ? selectSegmento.value : null;
                 const an = selectAno ? selectAno.value : null;
                 const m = selectMes ? selectMes.value : null;
-                // NO pasar categoría al endpoint
-                console.log('🔄 Cambio de filtro seg/año/mes detectado:', { seg, an, m });
-                // cargarImagenesDisponibles llama actualizarSelectImagenes() internamente
-                await cargarImagenesDisponibles(seg, an, m);
+                
+                console.log('🔄 [CREAR] Cambio de filtro seg/año/mes detectado:', { seg, an, m });
+                
+                // Solo hacer request si hay al menos segmento, año y mes
+                if (seg && an && m) {
+                    await cargarImagenesDisponibles(seg, an, m);
+                } else {
+                    console.log('⚠️ [CREAR] Esperando que se completen seg/año/mes');
+                }
             };
             
             // Agregar listeners a filtros seg/año/mes
@@ -950,18 +988,19 @@
             // Listener SEPARADO para cambios de categoría - solo actualiza select, sin cargar endpoint
             if (selectCategoria) {
                 selectCategoria.addEventListener('change', () => {
-                    console.log('🔄 Categoría cambió, actualizando dropdown...');
+                    console.log('🔄 [CREAR] Categoría cambió, actualizando dropdown...');
                     actualizarSelectImagenes(); // Solo filtra, no carga del endpoint
                 });
             }
             
-            // ✅ Marcar que listeners ya fueron configurados
-            listenersImagenesConfigurados = true;
-            console.log('✅ Listeners de imágenes CONFIGURADOS correctamente');
+            console.log('✅ [CREAR] Listeners de imágenes configurados');
+            
+            // 🔒 Marcar que los listeners ya fueron configurados
+            listenersCrearConfigurados = true;
             
             // Event listeners para actualizar carrusel en tiempo real
-            const selectListado = document.querySelector('select[name="imagen_listado"]');
-            const selectCaracteristicas = document.querySelector('select[name="imagen_caracteristicas"]');
+            const selectListado = crearForm.querySelector('select[name="imagen_listado"]');
+            const selectCaracteristicas = crearForm.querySelector('select[name="imagen_caracteristicas"]');
             const sliderContainer = document.getElementById('crear-imagen-slider');
             const slides = sliderContainer.querySelectorAll('.slide');
             
@@ -1660,7 +1699,42 @@
             
             modal.querySelector('#contenido-edicion').innerHTML = formHtml;
             
-            // Event listeners
+            // 🔧 CONFIGURAR LISTENERS PARA CAMBIOS DE SEGMENTO/AÑO/MES
+            const selectSegmentoEdicion = modal.querySelector('select[name="segmento"]');
+            const selectAnoEdicion = modal.querySelector('select[name="ano"]');
+            const selectMesEdicion = modal.querySelector('select[name="mes"]');
+            const selectCategoriaEdicion = modal.querySelector('select[name="categoria"]');
+            
+            const actualizarImagenesEdicion = async () => {
+                const seg = selectSegmentoEdicion ? selectSegmentoEdicion.value : null;
+                const an = selectAnoEdicion ? selectAnoEdicion.value : null;
+                const m = selectMesEdicion ? selectMesEdicion.value : null;
+                
+                console.log('🔄 [MODAL EDICIÓN] Cambio de filtro seg/año/mes detectado:', { seg, an, m });
+                
+                // Hacer la request al servidor
+                await cargarImagenesDisponibles(seg, an, m);
+                
+                // Actualizar los dropdowns de imágenes en el modal
+                actualizarSelectImagenesEnModal(modal);
+            };
+            
+            // Agregar listeners a filtros seg/año/mes
+            if (selectSegmentoEdicion) selectSegmentoEdicion.addEventListener('change', actualizarImagenesEdicion);
+            if (selectAnoEdicion) selectAnoEdicion.addEventListener('change', actualizarImagenesEdicion);
+            if (selectMesEdicion) selectMesEdicion.addEventListener('change', actualizarImagenesEdicion);
+            
+            // Listener SEPARADO para categoría (solo filtra localmente, sin request)
+            if (selectCategoriaEdicion) {
+                selectCategoriaEdicion.addEventListener('change', () => {
+                    console.log('🔄 [MODAL EDICIÓN] Categoría cambió, actualizando dropdown...');
+                    actualizarSelectImagenesEnModal(modal);
+                });
+            }
+            
+            console.log('✅ [MODAL EDICIÓN] Listeners configurados para cambios de imágenes');
+            
+            // Event listeners para los botones
             modal.querySelector('#btn-guardar-edicion').addEventListener('click', async () => {
                 await guardarEdicionDesdeModal(modal);
             });
@@ -1786,7 +1860,22 @@
         }
 
         // Cargar imágenes disponibles al iniciar
-        document.addEventListener('DOMContentLoaded', cargarImagenesDisponibles);
+        document.addEventListener('DOMContentLoaded', async () => {
+            // Cargar con valores por defecto (sin depender de los selects)
+            const segmento = 'fnb';
+            const ano = '2025';
+            const mes = 'noviembre';
+            
+            console.log('📌 DOMContentLoaded: Cargando con valores por defecto:', { segmento, ano, mes });
+            
+            // 1. Primero cargar las imágenes disponibles
+            await cargarImagenesDisponibles(segmento, ano, mes);
+            
+            // 2. Luego inicializar el carrusel y configurar listeners
+            inicializarCarruselCrear();
+            
+            console.log('✅ DOMContentLoaded: Inicialización completa');
+        });
     </script>
 </body>
 </html>
