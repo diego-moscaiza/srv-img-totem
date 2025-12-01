@@ -760,87 +760,116 @@
         let productosGlobal = [];
         let imagenesDisponibles = { listado: {}, caracteristicas: {} };
 
-        // Cargar imágenes disponibles con filtros
+        // Cargar imágenes disponibles con filtros - MEJORADO
         async function cargarImagenesDisponibles(segmento = null, ano = null, mes = null, categoria = null) {
             try {
                 const params = new URLSearchParams();
                 
+                // Normalizar parámetros
                 if (segmento && String(segmento).trim() !== '') {
-                    params.append('segmento', String(segmento).trim());
+                    const segmentoLimpio = String(segmento).trim().toLowerCase();
+                    params.append('segmento', segmentoLimpio);
                 }
                 if (ano && String(ano).trim() !== '') {
                     params.append('ano', String(ano).trim());
                 }
                 if (mes && String(mes).trim() !== '') {
-                    params.append('mes', String(mes).trim());
+                    const mesLimpio = String(mes).trim().toLowerCase();
+                    params.append('mes', mesLimpio);
                 }
-                if (categoria && String(categoria).trim() !== '') {
-                    params.append('categoria', String(categoria).trim());
-                }
+                // NO PASAR CATEGORÍA EN EL ENDPOINT - se filtrará manualmente en actualizarSelectImagenes
                 
                 const url = '/api/imagenes-disponibles' + (params.toString() ? '?' + params.toString() : '');
-                console.log('Cargando imágenes desde:', url);
-                console.log('Parámetros enviados - segmento:', segmento, 'año:', ano, 'mes:', mes, 'categoría:', categoria);
+                console.log('📡 Consultando endpoint:', url);
+                console.log('   Parámetros: { segmento:', segmento, ', año:', ano, ', mes:', mes, ', categoría:', categoria, '(filtro manual) }');
                 
                 const response = await fetch(url);
                 if (response.ok) {
                     imagenesDisponibles = await response.json();
-                    console.log('Imágenes cargadas:', imagenesDisponibles);
+                    console.log('✅ Respuesta recibida con', 
+                        Object.keys(imagenesDisponibles.listado || {}).length, 'claves de listado y',
+                        Object.keys(imagenesDisponibles.caracteristicas || {}).length, 'claves de características');
+                    // ✅ LLAMAR AQUÍ para sincronizar - el dropdown se actualiza DESPUÉS de cargar datos
                     actualizarSelectImagenes();
                 } else {
-                    console.error('Error en respuesta del servidor:', response.status);
+                    console.error('❌ Error en respuesta del servidor:', response.status);
+                    mostrarAlerta('⚠️ Error al cargar imágenes disponibles', 'error');
                 }
             } catch(e) {
-                console.error('Error cargando imágenes:', e);
+                console.error('❌ Error cargando imágenes:', e);
+                mostrarAlerta('⚠️ Error de conexión al cargar imágenes: ' + e.message, 'error');
             }
         }
 
-        // Función para detectar cambios en filtros
-        function configurarListenersImagenes() {
-            const selectSegmento = document.querySelector('select[name="segmento"]');
-            const selectAno = document.querySelector('select[name="ano"]');
-            const selectMes = document.querySelector('select[name="mes"]');
-            const selectCategoria = document.querySelector('select[name="categoria"]');
-            
-            const actualizarFiltros = () => {
-                const segmento = selectSegmento ? selectSegmento.value : null;
-                const ano = selectAno ? selectAno.value : null;
-                const mes = selectMes ? selectMes.value : null;
-                const categoria = selectCategoria ? selectCategoria.value : null;
-                
-                console.log('Actualizando filtros - segmento:', segmento, 'año:', ano, 'mes:', mes, 'categoría:', categoria);
-                // Siempre llamar con los valores actuales
-                cargarImagenesDisponibles(segmento, ano, mes, categoria);
-            };
-            
-            if (selectSegmento) selectSegmento.addEventListener('change', actualizarFiltros);
-            if (selectAno) selectAno.addEventListener('change', actualizarFiltros);
-            if (selectMes) selectMes.addEventListener('change', actualizarFiltros);
-            if (selectCategoria) selectCategoria.addEventListener('change', actualizarFiltros);
-        }
+        // NOTA: Los listeners se configuran en inicializarCarruselCrear para evitar duplicados
+        // y garantizar sincronización correcta de actualizaciones
 
-        // Actualizar select de imágenes
+        // Actualizar select de imágenes - MEJORADO
         function actualizarSelectImagenes() {
             const selectListado = document.querySelector('select[name="imagen_listado"]');
             const selectCaracteristicas = document.querySelector('select[name="imagen_caracteristicas"]');
+            const selectCategoria = document.querySelector('select[name="categoria"]');
+            
+            // Obtener la categoría seleccionada (puede ser vacío)
+            const categoriaSeleccionada = selectCategoria?.value?.toLowerCase().trim() || null;
+            
+            console.log('🖼️ Actualizando select de imágenes');
+            console.log('   Categoría seleccionada:', categoriaSeleccionada);
+            console.log('   Imágenes disponibles:', imagenesDisponibles);
             
             if (selectListado && imagenesDisponibles.listado) {
                 let options = '<option value="">Seleccionar...</option>';
+                let imagenesEncontradas = 0;
+                
                 for (const [key, imagenes] of Object.entries(imagenesDisponibles.listado)) {
+                    // Si hay categoría seleccionada, filtrar por ella
+                    if (categoriaSeleccionada) {
+                        const partes = key.split('/');
+                        const categoriaCarpeta = partes[partes.length - 1]; // "1-celulares"
+                        const categoriaClave = categoriaCarpeta.split('-').slice(1).join('-').toLowerCase(); // "celulares"
+                        
+                        // Solo incluir si coincide la categoría
+                        if (categoriaClave !== categoriaSeleccionada) {
+                            continue;
+                        }
+                    }
+                    
+                    // Mostrar todas las imágenes de este directorio
                     imagenes.forEach(img => {
                         options += `<option value="${img.url}">${key} - ${img.nombre}</option>`;
+                        imagenesEncontradas++;
                     });
                 }
+                
+                console.log(`✅ Imágenes de listado encontradas: ${imagenesEncontradas}`);
                 selectListado.innerHTML = options;
             }
             
             if (selectCaracteristicas && imagenesDisponibles.caracteristicas) {
                 let options = '<option value="">Seleccionar...</option>';
+                let imagenesEncontradas = 0;
+                
                 for (const [key, imagenes] of Object.entries(imagenesDisponibles.caracteristicas)) {
+                    // Si hay categoría seleccionada, filtrar por ella
+                    if (categoriaSeleccionada) {
+                        const partes = key.split('/');
+                        const categoriaCarpeta = partes[partes.length - 1];
+                        const categoriaClave = categoriaCarpeta.split('-').slice(1).join('-').toLowerCase();
+                        
+                        // Solo incluir si coincide la categoría
+                        if (categoriaClave !== categoriaSeleccionada) {
+                            continue;
+                        }
+                    }
+                    
+                    // Mostrar todas las imágenes de este directorio
                     imagenes.forEach(img => {
                         options += `<option value="${img.url}">${key} - ${img.nombre}</option>`;
+                        imagenesEncontradas++;
                     });
                 }
+                
+                console.log(`✅ Imágenes de características encontradas: ${imagenesEncontradas}`);
                 selectCaracteristicas.innerHTML = options;
             }
         }
@@ -864,10 +893,18 @@
             
             if (seccion === 'crear') {
                 setTimeout(() => {
-                    cargarImagenesDisponibles();
-                    configurarListenersImagenes();
-                    // Inicializar carrusel y event listeners para cambio de imágenes
-                    inicializarCarruselCrear();
+                    // Cargar todas las imágenes del mes/año/segmento seleccionado
+                    const selectSegmento = document.querySelector('select[name="segmento"]');
+                    const selectAno = document.querySelector('select[name="ano"]');
+                    const selectMes = document.querySelector('select[name="mes"]');
+                    
+                    const segmento = selectSegmento?.value || null;
+                    const ano = selectAno?.value || null;
+                    const mes = selectMes?.value || null;
+                    
+                    // NO pasar categoría en la carga inicial
+                    cargarImagenesDisponibles(segmento, ano, mes);
+                    inicializarCarruselCrear(); // Esto configura listeners
                 }, 100);
             } else if (seccion === 'listar') {
                 setTimeout(() => {
@@ -876,11 +913,20 @@
             }
         }
         
+        // Flag para controlar inicialización única de listeners
+        let listenersImagenesConfigurados = false;
+        
         function inicializarCarruselCrear() {
             const container = document.getElementById('crear-imagen-slider').parentElement;
             inicializarSlider(container);
             
-            // Event listeners para filtros de imágenes
+            // ✅ PREVENIR DUPLICACIÓN DE LISTENERS - Configurar solo una vez
+            if (listenersImagenesConfigurados) {
+                console.log('✅ Listeners ya configurados, saltando inicialización');
+                return;
+            }
+            
+            // Event listeners para filtros de imágenes - MEJORADO
             const selectSegmento = document.querySelector('select[name="segmento"]');
             const selectAno = document.querySelector('select[name="ano"]');
             const selectMes = document.querySelector('select[name="mes"]');
@@ -890,15 +936,28 @@
                 const seg = selectSegmento ? selectSegmento.value : null;
                 const an = selectAno ? selectAno.value : null;
                 const m = selectMes ? selectMes.value : null;
-                const cat = selectCategoria ? selectCategoria.value : null;
-                await cargarImagenesDisponibles(seg, an, m, cat);
-                actualizarSelectImagenes();
+                // NO pasar categoría al endpoint
+                console.log('🔄 Cambio de filtro seg/año/mes detectado:', { seg, an, m });
+                // cargarImagenesDisponibles llama actualizarSelectImagenes() internamente
+                await cargarImagenesDisponibles(seg, an, m);
             };
             
+            // Agregar listeners a filtros seg/año/mes
             if (selectSegmento) selectSegmento.addEventListener('change', actualizarImagenesFiltro);
             if (selectAno) selectAno.addEventListener('change', actualizarImagenesFiltro);
             if (selectMes) selectMes.addEventListener('change', actualizarImagenesFiltro);
-            if (selectCategoria) selectCategoria.addEventListener('change', actualizarImagenesFiltro);
+            
+            // Listener SEPARADO para cambios de categoría - solo actualiza select, sin cargar endpoint
+            if (selectCategoria) {
+                selectCategoria.addEventListener('change', () => {
+                    console.log('🔄 Categoría cambió, actualizando dropdown...');
+                    actualizarSelectImagenes(); // Solo filtra, no carga del endpoint
+                });
+            }
+            
+            // ✅ Marcar que listeners ya fueron configurados
+            listenersImagenesConfigurados = true;
+            console.log('✅ Listeners de imágenes CONFIGURADOS correctamente');
             
             // Event listeners para actualizar carrusel en tiempo real
             const selectListado = document.querySelector('select[name="imagen_listado"]');
