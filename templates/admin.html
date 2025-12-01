@@ -80,21 +80,21 @@
             padding-bottom: 15px;
         }
         .form-group {
-            margin-bottom: 18px;
+            margin-bottom: 15px;
         }
         label {
             display: block;
-            margin-bottom: 8px;
+            margin-bottom: 5px;
             color: #222;
             font-weight: 600;
-            font-size: 0.95em;
+            font-size: 0.85em;
         }
         input, textarea, select {
             width: 100%;
-            padding: 12px 15px;
+            padding: 9px 12px;
             border: 2px solid #e0e0e0;
-            border-radius: 8px;
-            font-size: 14px;
+            border-radius: 6px;
+            font-size: 13px;
             transition: all 0.3s ease;
             font-family: inherit;
             background: #f9fafd;
@@ -112,7 +112,78 @@
         .grid {
             display: grid;
             grid-template-columns: repeat(2, 1fr);
-            gap: 20px;
+            gap: 18px;
+        }
+        /* Layout de 2 columnas: carrusel + formulario */
+        .crear-container {
+            display: grid;
+            grid-template-columns: 1fr 1.2fr;
+            gap: 30px;
+            align-items: start;
+        }
+        .carrusel-section {
+            position: sticky;
+            top: 20px;
+        }
+        .formulario-section {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            overflow-y: auto;
+            max-height: calc(100vh - 250px);
+        }
+        #crearForm {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+        /* Secciones de formulario con título */
+        .form-section {
+            background: #f9fafd;
+            padding: 12px;
+            border-radius: 8px;
+            border: 1px solid #606366;
+            flex-shrink: 0;
+        }
+        .form-section h4 {
+            color: #2d5be3;
+            font-size: 0.8em;
+            font-weight: 700;
+            margin-bottom: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .form-section .grid {
+            grid-template-columns: 1fr 1fr;
+        }
+        .form-section .grid.full {
+            grid-template-columns: 1fr;
+        }
+        /* Modal layout mejorado */
+        .modal-content {
+            background: #fff;
+            margin: 3% auto;
+            padding: 25px;
+            border-radius: 15px;
+            width: 95%;
+            max-width: 1200px;
+            max-height: 90vh;
+            box-shadow: 0 8px 32px rgba(60, 72, 88, 0.12);
+            animation: modalSlide 0.3s ease;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+        .modal-body {
+            display: grid;
+            grid-template-columns: 380px 1fr;
+            gap: 25px;
+            align-items: start;
+            overflow: hidden;
+            flex: 1;
+        }
+        .modal-body.full {
+            grid-template-columns: 1fr;
         }
         /* Botones */
         .btn-group {
@@ -215,19 +286,24 @@
             width: 100%;
             height: 100%;
             background: rgba(0,0,0,0.12);
-            overflow-y: auto;
             backdrop-filter: blur(2px);
+            overflow: hidden;
         }
         .modal.show { display: block; }
         .modal-content {
             background: #fff;
-            margin: 5% auto;
-            padding: 35px;
+            margin: 3% auto;
+            padding: 25px;
             border-radius: 15px;
-            width: 90%;
-            max-width: 650px;
+            width: 95%;
+            max-width: 1200px;
+            max-height: 94vh;
             box-shadow: 0 8px 32px rgba(60, 72, 88, 0.12);
             animation: modalSlide 0.3s ease;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            position: relative;
         }
         @keyframes modalSlide {
             from { transform: translateY(-50px); opacity: 0; }
@@ -235,7 +311,9 @@
         }
         .close {
             color: #999;
-            float: right;
+            position: absolute;
+            right: 25px;
+            top: 20px;
             font-size: 28px;
             font-weight: bold;
             cursor: pointer;
@@ -347,6 +425,7 @@
             display: -webkit-box;
             -webkit-line-clamp: 2;
             -webkit-box-orient: vertical;
+            line-clamp: 2;
             overflow: hidden;
         }
         .producto-precio {
@@ -378,6 +457,41 @@
             font-size: 12px;
             margin: 0;
         }
+        
+        /* Responsive Design */
+        @media (max-width: 1024px) {
+            .crear-container {
+                grid-template-columns: 1fr;
+            }
+            .carrusel-section {
+                position: static;
+                max-width: 100%;
+            }
+            .modal-body {
+                grid-template-columns: 1fr;
+            }
+        }
+        
+        @media (max-width: 768px) {
+            .grid {
+                grid-template-columns: 1fr;
+            }
+            .form-section .grid {
+                grid-template-columns: 1fr;
+            }
+            .productos-grid {
+                grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+            }
+            .modal-content {
+                width: 98%;
+                padding: 15px;
+                margin: 10% auto;
+            }
+            h2 {
+                font-size: 1.4em;
+                margin-bottom: 15px;
+            }
+        }
     </style>
 </head>
 <body>
@@ -400,82 +514,158 @@
         <!-- Sección: Crear Producto -->
         <div id="crear" class="section active">
             <h2>➕ Crear Nuevo Producto</h2>
-            <form id="crearForm">
-                <div class="grid">
-                    <div class="form-group">
-                        <label>Código *</label>
-                        <input type="text" name="codigo" required placeholder="ej: CELCEL0091">
+            
+            <div class="crear-container">
+                <!-- COLUMNA IZQUIERDA: Carrusel -->
+                <div class="carrusel-section">
+                    <h3 style="color: #2d5be3; margin-bottom: 12px; font-size: 1em; font-weight: 600;">📸 Vista Previa</h3>
+                    <div style="position: relative; width: 100%; background: #f9fafd; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
+                        
+                        <!-- Contenedor del slider -->
+                        <div id="crear-imagen-slider" style="position: relative; width: 100%; padding-bottom: 100%; background: #f9fafd;">
+                            <div class="slide" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; opacity: 1; transition: opacity 0.3s ease; background: #f9fafd; color: #999; font-size: 0.95em;">Seleccione imagen</div>
+                            <div class="slide" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; opacity: 0; transition: opacity 0.3s ease; background: #f9fafd; color: #999; font-size: 0.95em;">Seleccione imagen</div>
+                        </div>
+                        
+                        <!-- Botones de navegación -->
+                        <button type="button" class="slide-prev" style="position: absolute; top: 50%; left: 10px; transform: translateY(-50%); background: rgba(45, 91, 227, 0.8); color: white; border: none; width: 35px; height: 35px; border-radius: 50%; cursor: pointer; font-size: 18px; display: flex; align-items: center; justify-content: center; z-index: 10; transition: background 0.3s ease;">‹</button>
+                        <button type="button" class="slide-next" style="position: absolute; top: 50%; right: 10px; transform: translateY(-50%); background: rgba(45, 91, 227, 0.8); color: white; border: none; width: 35px; height: 35px; border-radius: 50%; cursor: pointer; font-size: 18px; display: flex; align-items: center; justify-content: center; z-index: 10; transition: background 0.3s ease;">›</button>
+                        
+                        <!-- Indicadores de slide -->
+                        <div style="position: absolute; bottom: 12px; left: 50%; transform: translateX(-50%); display: flex; gap: 6px; z-index: 10;">
+                            <div class="slide-indicator active" style="width: 8px; height: 8px; border-radius: 50%; background: #2d5be3; cursor: pointer; transition: all 0.3s ease;"></div>
+                            <div class="slide-indicator" style="width: 8px; height: 8px; border-radius: 50%; background: rgba(45, 91, 227, 0.4); cursor: pointer; transition: all 0.3s ease;"></div>
+                        </div>
+                        
                     </div>
-                    <div class="form-group">
-                        <label>Nombre *</label>
-                        <input type="text" name="nombre" required placeholder="ej: SAMSUNG GALAXY A06">
-                    </div>
-                    <div class="form-group" style="grid-column: 1/-1;">
-                        <label>Descripción</label>
-                        <textarea name="descripcion" placeholder="ej: 128 GB - 4 GB RAM"></textarea>
-                    </div>
-                    <div class="form-group">
-                        <label>Precio *</label>
-                        <input type="number" name="precio" step="0.01" required placeholder="ej: 949.00">
-                    </div>
-                    <div class="form-group">
-                        <label>Categoría *</label>
-                        <select name="categoria" required>
-                            <option value="">Seleccionar...</option>
-                            <option>celulares</option>
-                            <option>laptops</option>
-                            <option>televisores</option>
-                            <option>refrigeradoras</option>
-                            <option>lavadoras</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label>Segmento *</label>
-                        <select name="segmento" required>
-                            <option value="fnb">FNB</option>
-                            <option value="gaso">GASO</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label>Estado *</label>
-                        <select name="estado" required>
-                            <option value="disponible">Disponible</option>
-                            <option value="no disponible">No Disponible</option>
-                            <option value="agotado">Agotado</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label>Stock</label>
-                        <select name="stock">
-                            <option value="true">Sí</option>
-                            <option value="false">No</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label>Imagen Listado</label>
-                        <input type="text" name="imagen_listado" placeholder="http://192.168.1.65:8000/api/catalogos/...">
-                    </div>
-                    <div class="form-group">
-                        <label>Imagen Características</label>
-                        <input type="text" name="imagen_caracteristicas" placeholder="http://192.168.1.65:8000/api/catalogos/...">
-                    </div>
-                    <div class="form-group">
-                        <label>Mes *</label>
-                        <input type="text" name="mes" required placeholder="noviembre">
-                    </div>
-                    <div class="form-group">
-                        <label>Año *</label>
-                        <input type="number" name="ano" required placeholder="2025">
-                    </div>
-                    <div class="form-group" style="grid-column: 1/-1;">
-                        <label>Cuotas (JSON) *</label>
-                        <textarea name="cuotas" required placeholder='{"3": 338.85, "6": 178.87, "9": 125.7, "12": 99.24}'></textarea>
+                    
+                    <div style="margin-top: 12px; padding-top: 12px; border-top: 1px solid #e0e0e0;">
+                        <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                            <span style="padding: 4px 10px; background: #e6eaff; color: #2d5be3; border-radius: 16px; font-size: 0.85em; font-weight: 600;">📸 Listado</span>
+                            <span style="padding: 4px 10px; background: #e6eaff; color: #2d5be3; border-radius: 16px; font-size: 0.85em; font-weight: 600;">📸 Detalles</span>
+                        </div>
                     </div>
                 </div>
-                <div class="btn-group">
-                    <button type="submit">✅ Crear Producto</button>
+                
+                <!-- COLUMNA DERECHA: Formulario -->
+                <div class="formulario-section">
+                    <form id="crearForm">
+                        <!-- Sección: Información Básica -->
+                        <div class="form-section">
+                            <h4>📋 Información Básica</h4>
+                            <div class="grid">
+                                <div class="form-group">
+                                    <label>Código *</label>
+                                    <input type="text" name="codigo" required placeholder="CELCEL0091">
+                                </div>
+                                <div class="form-group">
+                                    <label>Nombre *</label>
+                                    <input type="text" name="nombre" required placeholder="SAMSUNG GALAXY A06">
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label>Descripción</label>
+                                <textarea name="descripcion" placeholder="128 GB - 4 GB RAM" style="min-height: 80px;"></textarea>
+                            </div>
+                        </div>
+                        
+                        <!-- Sección: Precio y Categoría -->
+                        <div class="form-section">
+                            <h4>💰 Precio y Categoría</h4>
+                            <div class="grid">
+                                <div class="form-group">
+                                    <label>Precio *</label>
+                                    <input type="number" name="precio" step="0.01" required placeholder="949.00">
+                                </div>
+                                <div class="form-group">
+                                    <label>Categoría *</label>
+                                    <select name="categoria" required>
+                                        <option value="">Seleccionar...</option>
+                                        <option>celulares</option>
+                                        <option>laptops</option>
+                                        <option>televisores</option>
+                                        <option>refrigeradoras</option>
+                                        <option>lavadoras</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Sección: Clasificación -->
+                        <div class="form-section">
+                            <h4>🏷️ Clasificación</h4>
+                            <div class="grid">
+                                <div class="form-group">
+                                    <label>Segmento *</label>
+                                    <select name="segmento" required>
+                                        <option value="fnb">FNB</option>
+                                        <option value="gaso">GASO</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label>Estado *</label>
+                                    <select name="estado" required>
+                                        <option value="disponible">Disponible</option>
+                                        <option value="no disponible">No Disponible</option>
+                                        <option value="agotado">Agotado</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="grid">
+                                <div class="form-group">
+                                    <label>Mes *</label>
+                                    <select name="mes" required>
+                                        <option value="">Seleccionar...</option>
+                                        <option>enero</option><option>febrero</option><option>marzo</option><option>abril</option>
+                                        <option>mayo</option><option>junio</option><option>julio</option><option>agosto</option>
+                                        <option>septiembre</option><option>octubre</option><option>noviembre</option><option>diciembre</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label>Año *</label>
+                                    <select name="ano" required>
+                                        <option value="">Seleccionar...</option>
+                                        <option value="2024">2024</option>
+                                        <option value="2025">2025</option>
+                                        <option value="2026">2026</option>
+                                        <option value="2027">2027</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Sección: Imágenes -->
+                        <div class="form-section">
+                            <h4>🖼️ Imágenes</h4>
+                            <div class="form-group">
+                                <label>Imagen Listado *</label>
+                                <select name="imagen_listado" required>
+                                    <option value="">Seleccionar...</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>Imagen Características *</label>
+                                <select name="imagen_caracteristicas" required>
+                                    <option value="">Seleccionar...</option>
+                                </select>
+                            </div>
+                        </div>
+                        
+                        <!-- Sección: Cuotas -->
+                        <div class="form-section">
+                            <h4>📊 Cuotas (JSON) *</h4>
+                            <div class="form-group">
+                                <textarea name="cuotas" required placeholder='{"3": 338.85, "6": 178.87, "9": 125.7, "12": 99.24}' style="min-height: 120px; font-family: 'Courier New', monospace; font-size: 0.9em;"></textarea>
+                            </div>
+                        </div>
+                        
+                        <!-- Botones -->
+                        <div class="btn-group" style="margin-top: 15px;">
+                            <button type="submit">✅ Crear Producto</button>
+                        </div>
+                    </form>
                 </div>
-            </form>
+            </div>
         </div>
         
         <!-- Sección: Productos Registrados -->
@@ -568,6 +758,92 @@
     <script>
         let productoEnEdicion = null;
         let productosGlobal = [];
+        let imagenesDisponibles = { listado: {}, caracteristicas: {} };
+
+        // Cargar imágenes disponibles con filtros
+        async function cargarImagenesDisponibles(segmento = null, ano = null, mes = null, categoria = null) {
+            try {
+                const params = new URLSearchParams();
+                
+                if (segmento && String(segmento).trim() !== '') {
+                    params.append('segmento', String(segmento).trim());
+                }
+                if (ano && String(ano).trim() !== '') {
+                    params.append('ano', String(ano).trim());
+                }
+                if (mes && String(mes).trim() !== '') {
+                    params.append('mes', String(mes).trim());
+                }
+                if (categoria && String(categoria).trim() !== '') {
+                    params.append('categoria', String(categoria).trim());
+                }
+                
+                const url = '/api/imagenes-disponibles' + (params.toString() ? '?' + params.toString() : '');
+                console.log('Cargando imágenes desde:', url);
+                console.log('Parámetros enviados - segmento:', segmento, 'año:', ano, 'mes:', mes, 'categoría:', categoria);
+                
+                const response = await fetch(url);
+                if (response.ok) {
+                    imagenesDisponibles = await response.json();
+                    console.log('Imágenes cargadas:', imagenesDisponibles);
+                    actualizarSelectImagenes();
+                } else {
+                    console.error('Error en respuesta del servidor:', response.status);
+                }
+            } catch(e) {
+                console.error('Error cargando imágenes:', e);
+            }
+        }
+
+        // Función para detectar cambios en filtros
+        function configurarListenersImagenes() {
+            const selectSegmento = document.querySelector('select[name="segmento"]');
+            const selectAno = document.querySelector('select[name="ano"]');
+            const selectMes = document.querySelector('select[name="mes"]');
+            const selectCategoria = document.querySelector('select[name="categoria"]');
+            
+            const actualizarFiltros = () => {
+                const segmento = selectSegmento ? selectSegmento.value : null;
+                const ano = selectAno ? selectAno.value : null;
+                const mes = selectMes ? selectMes.value : null;
+                const categoria = selectCategoria ? selectCategoria.value : null;
+                
+                console.log('Actualizando filtros - segmento:', segmento, 'año:', ano, 'mes:', mes, 'categoría:', categoria);
+                // Siempre llamar con los valores actuales
+                cargarImagenesDisponibles(segmento, ano, mes, categoria);
+            };
+            
+            if (selectSegmento) selectSegmento.addEventListener('change', actualizarFiltros);
+            if (selectAno) selectAno.addEventListener('change', actualizarFiltros);
+            if (selectMes) selectMes.addEventListener('change', actualizarFiltros);
+            if (selectCategoria) selectCategoria.addEventListener('change', actualizarFiltros);
+        }
+
+        // Actualizar select de imágenes
+        function actualizarSelectImagenes() {
+            const selectListado = document.querySelector('select[name="imagen_listado"]');
+            const selectCaracteristicas = document.querySelector('select[name="imagen_caracteristicas"]');
+            
+            if (selectListado && imagenesDisponibles.listado) {
+                let options = '<option value="">Seleccionar...</option>';
+                for (const [key, imagenes] of Object.entries(imagenesDisponibles.listado)) {
+                    imagenes.forEach(img => {
+                        options += `<option value="${img.url}">${key} - ${img.nombre}</option>`;
+                    });
+                }
+                selectListado.innerHTML = options;
+            }
+            
+            if (selectCaracteristicas && imagenesDisponibles.caracteristicas) {
+                let options = '<option value="">Seleccionar...</option>';
+                for (const [key, imagenes] of Object.entries(imagenesDisponibles.caracteristicas)) {
+                    imagenes.forEach(img => {
+                        options += `<option value="${img.url}">${key} - ${img.nombre}</option>`;
+                    });
+                }
+                selectCaracteristicas.innerHTML = options;
+            }
+        }
 
         // Alternar secciones
         function mostrarSeccion(seccion) {
@@ -586,10 +862,74 @@
                 }
             });
             
-            if (seccion === 'listar') {
+            if (seccion === 'crear') {
+                setTimeout(() => {
+                    cargarImagenesDisponibles();
+                    configurarListenersImagenes();
+                    // Inicializar carrusel y event listeners para cambio de imágenes
+                    inicializarCarruselCrear();
+                }, 100);
+            } else if (seccion === 'listar') {
                 setTimeout(() => {
                     cargarProductos();
                 }, 100);
+            }
+        }
+        
+        function inicializarCarruselCrear() {
+            const container = document.getElementById('crear-imagen-slider').parentElement;
+            inicializarSlider(container);
+            
+            // Event listeners para filtros de imágenes
+            const selectSegmento = document.querySelector('select[name="segmento"]');
+            const selectAno = document.querySelector('select[name="ano"]');
+            const selectMes = document.querySelector('select[name="mes"]');
+            const selectCategoria = document.querySelector('select[name="categoria"]');
+            
+            const actualizarImagenesFiltro = async () => {
+                const seg = selectSegmento ? selectSegmento.value : null;
+                const an = selectAno ? selectAno.value : null;
+                const m = selectMes ? selectMes.value : null;
+                const cat = selectCategoria ? selectCategoria.value : null;
+                await cargarImagenesDisponibles(seg, an, m, cat);
+                actualizarSelectImagenes();
+            };
+            
+            if (selectSegmento) selectSegmento.addEventListener('change', actualizarImagenesFiltro);
+            if (selectAno) selectAno.addEventListener('change', actualizarImagenesFiltro);
+            if (selectMes) selectMes.addEventListener('change', actualizarImagenesFiltro);
+            if (selectCategoria) selectCategoria.addEventListener('change', actualizarImagenesFiltro);
+            
+            // Event listeners para actualizar carrusel en tiempo real
+            const selectListado = document.querySelector('select[name="imagen_listado"]');
+            const selectCaracteristicas = document.querySelector('select[name="imagen_caracteristicas"]');
+            const sliderContainer = document.getElementById('crear-imagen-slider');
+            const slides = sliderContainer.querySelectorAll('.slide');
+            
+            if (selectListado && slides.length > 0) {
+                selectListado.addEventListener('change', (e) => {
+                    if (e.target.value.trim() !== '') {
+                        const imgSlide = slides[0];
+                        imgSlide.innerHTML = `<img src="${e.target.value}" style="width: 100%; height: 100%; object-fit: contain; display: block;">`;
+                        imgSlide.style.color = 'transparent';
+                    } else {
+                        slides[0].innerHTML = 'Seleccione imagen de listado';
+                        slides[0].style.color = '#999';
+                    }
+                });
+            }
+            
+            if (selectCaracteristicas && slides.length > 1) {
+                selectCaracteristicas.addEventListener('change', (e) => {
+                    if (e.target.value.trim() !== '') {
+                        const imgSlide = slides[1];
+                        imgSlide.innerHTML = `<img src="${e.target.value}" style="width: 100%; height: 100%; object-fit: contain; display: block;">`;
+                        imgSlide.style.color = 'transparent';
+                    } else {
+                        slides[1].innerHTML = 'Seleccione imagen de características';
+                        slides[1].style.color = '#999';
+                    }
+                });
             }
         }
 
@@ -744,7 +1084,6 @@
                             </div>
                             <div class="producto-acciones">
                                 <button onclick="abrirDetalle(${p.id})">👁️ Ver</button>
-                                <button onclick="abrirEditModal(${p.id})">✏️ Editar</button>
                                 <button class="danger" onclick="eliminarProducto(${p.id})">🗑️ Eliminar</button>
                             </div>
                         </div>
@@ -772,134 +1111,506 @@
             try {
                 const response = await fetch('/api/productos/' + id);
                 const producto = await response.json();
+                productoEnEdicion = producto;
                 
-                let html = '<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 30px; align-items: start;">';
-                
-                html += '<div><h4 style="margin-bottom: 12px; color: #2d5be3;">📸 Imagen Listado</h4>';
-                if (producto.imagen_listado && producto.imagen_listado.trim() !== '') {
-                    html += `<div id="img-listado" style="width: 100%; height: 300px; background: #f9fafd; border-radius: 12px; display: flex; align-items: center; justify-content: center;">
-                                <img src="${producto.imagen_listado}" style="width: 100%; height: 100%; object-fit: contain; border-radius: 12px; border: 1px solid #e0e0e0; display: block;">
-                            </div>`;
-                } else {
-                    html += '<div style="width: 100%; height: 300px; background: #f9fafd; border: 2px dashed #d0d0d0; border-radius: 12px; display: flex; align-items: center; justify-content: center; color: #999; font-size: 1em;">Sin imagen</div>';
-                }
-                html += '</div>';
-                
-                html += '<div><h4 style="margin-bottom: 12px; color: #2d5be3;">📸 Imagen Características</h4>';
-                if (producto.imagen_caracteristicas && producto.imagen_caracteristicas.trim() !== '') {
-                    html += `<div id="img-caracteristicas" style="width: 100%; height: 300px; background: #f9fafd; border-radius: 12px; display: flex; align-items: center; justify-content: center;">
-                                <img src="${producto.imagen_caracteristicas}" style="width: 100%; height: 100%; object-fit: contain; border-radius: 12px; border: 1px solid #e0e0e0; display: block;">
-                            </div>`;
-                } else {
-                    html += '<div style="width: 100%; height: 300px; background: #f9fafd; border: 2px dashed #d0d0d0; border-radius: 12px; display: flex; align-items: center; justify-content: center; color: #999; font-size: 1em;">Sin imagen</div>';
-                }
-                html += '</div>';
-                
-                html += '</div>';
-                
-                html += '<div style="margin-top: 30px; padding-top: 30px; border-top: 1px solid #e0e0e0;">';
-                html += `<h4 style="color: #2d5be3; margin-bottom: 15px;">📋 Información del Producto</h4>`;
-                html += `<table style="width: 100%; border-collapse: collapse;">
-                    <tr style="border-bottom: 1px solid #e0e0e0;">
-                        <td style="padding: 10px 0; font-weight: 600; width: 150px;">Código:</td>
-                        <td style="padding: 10px 0;">${producto.codigo}</td>
-                    </tr>
-                    <tr style="border-bottom: 1px solid #e0e0e0;">
-                        <td style="padding: 10px 0; font-weight: 600;">Nombre:</td>
-                        <td style="padding: 10px 0;">${producto.nombre}</td>
-                    </tr>
-                    <tr style="border-bottom: 1px solid #e0e0e0;">
-                        <td style="padding: 10px 0; font-weight: 600;">Precio:</td>
-                        <td style="padding: 10px 0; color: #2d5be3; font-weight: 700;">S/. ${producto.precio.toFixed(2)}</td>
-                    </tr>
-                    <tr style="border-bottom: 1px solid #e0e0e0;">
-                        <td style="padding: 10px 0; font-weight: 600;">Categoría:</td>
-                        <td style="padding: 10px 0;">${producto.categoria}</td>
-                    </tr>
-                    <tr style="border-bottom: 1px solid #e0e0e0;">
-                        <td style="padding: 10px 0; font-weight: 600;">Segmento:</td>
-                        <td style="padding: 10px 0;">${producto.segmento.toUpperCase()}</td>
-                    </tr>
-                    <tr style="border-bottom: 1px solid #e0e0e0;">
-                        <td style="padding: 10px 0; font-weight: 600;">Estado:</td>
-                        <td style="padding: 10px 0;">${producto.estado}</td>
-                    </tr>
-                    <tr style="border-bottom: 1px solid #e0e0e0;">
-                        <td style="padding: 10px 0; font-weight: 600;">Mes:</td>
-                        <td style="padding: 10px 0;">${producto.mes}</td>
-                    </tr>
-                    <tr>
-                        <td style="padding: 10px 0; font-weight: 600;">Descripción:</td>
-                        <td style="padding: 10px 0;">${producto.descripcion || 'N/A'}</td>
-                    </tr>
-                </table>`;
-                html += '</div>';
-                
+                // Crear modal con campos editables
                 const modal = document.createElement('div');
                 modal.className = 'modal show';
                 modal.id = 'detalleModal';
                 modal.style.zIndex = '1100';
+                
                 modal.innerHTML = `
-                    <div class="modal-content" style="max-width: 1000px; max-height: 90vh; overflow-y: auto;">
+                    <div class="modal-content" style="max-width: 1000px; max-height: 90vh;">
                         <span class="close" onclick="document.getElementById('detalleModal').remove()">&times;</span>
-                        <h2>👁️ Detalle del Producto</h2>
-                        ${html}
+                        <h2 style="display: flex; align-items: center; gap: 10px;">👁️ Detalle del Producto <span style="font-size: 0.7em; color: #999; font-weight: 400;">(Editable)</span></h2>
+                        <div id="contenido-modal"></div>
                     </div>
                 `;
+                
                 document.body.appendChild(modal);
                 
-                setTimeout(() => {
-                    const imgs = modal.querySelectorAll('img');
-                    imgs.forEach(img => {
-                        img.addEventListener('error', function() {
-                            const parentDiv = this.parentElement;
-                            if (parentDiv) {
-                                parentDiv.innerHTML = '<div style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; color: #999; border: 2px dashed #d0d0d0; border-radius: 12px;">Sin imagen</div>';
-                            }
-                        });
+                // Cargar contenido con campos editables
+                await cargarContenidoEditable(modal, producto);
+                
+            } catch(e) {
+                mostrarAlerta('❌ Error: ' + e.message, 'error');
+            }
+        }
+        
+        async function cargarContenidoEditable(modal, producto) {
+            // Construir HTML con layout de 2 columnas
+            let html = '<div class="modal-body">';
+            
+            // COLUMNA IZQUIERDA: Carrusel
+            html += '<div style="display: flex; flex-direction: column; gap: 15px;">';
+            html += '<div style="position: relative; width: 100%; background: #f9fafd; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">';
+            
+            // Contenedor del slider
+            html += '<div id="imagen-slider" style="position: relative; width: 100%; padding-bottom: 100%; background: #f9fafd;">';
+            
+            // Imagen Listado
+            if (producto.imagen_listado && producto.imagen_listado.trim() !== '') {
+                html += `<div class="slide" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; opacity: 1; transition: opacity 0.3s ease;">
+                            <img src="${producto.imagen_listado}" style="width: 100%; height: 100%; object-fit: contain; display: block;">
+                        </div>`;
+            } else {
+                html += `<div class="slide" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; opacity: 1; transition: opacity 0.3s ease; background: #f9fafd; color: #999; font-size: 0.9em;">Sin imagen</div>`;
+            }
+            
+            // Imagen Características
+            if (producto.imagen_caracteristicas && producto.imagen_caracteristicas.trim() !== '') {
+                html += `<div class="slide" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; opacity: 0; transition: opacity 0.3s ease;">
+                            <img src="${producto.imagen_caracteristicas}" style="width: 100%; height: 100%; object-fit: contain; display: block;">
+                        </div>`;
+            } else {
+                html += `<div class="slide" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; opacity: 0; transition: opacity 0.3s ease; background: #f9fafd; color: #999; font-size: 0.9em;">Sin imagen</div>`;
+            }
+            
+            html += '</div>';
+            
+            // Botones de navegación
+            html += '<button class="slide-prev" style="position: absolute; top: 50%; left: 10px; transform: translateY(-50%); background: rgba(45, 91, 227, 0.8); color: white; border: none; width: 35px; height: 35px; border-radius: 50%; cursor: pointer; font-size: 18px; display: flex; align-items: center; justify-content: center; z-index: 10; transition: background 0.3s ease;">‹</button>';
+            html += '<button class="slide-next" style="position: absolute; top: 50%; right: 10px; transform: translateY(-50%); background: rgba(45, 91, 227, 0.8); color: white; border: none; width: 35px; height: 35px; border-radius: 50%; cursor: pointer; font-size: 18px; display: flex; align-items: center; justify-content: center; z-index: 10; transition: background 0.3s ease;">›</button>';
+            
+            // Indicadores de slide
+            html += '<div style="position: absolute; bottom: 12px; left: 50%; transform: translateX(-50%); display: flex; gap: 6px; z-index: 10;">';
+            html += '<div class="slide-indicator active" style="width: 8px; height: 8px; border-radius: 50%; background: #2d5be3; cursor: pointer; transition: all 0.3s ease;"></div>';
+            html += '<div class="slide-indicator" style="width: 8px; height: 8px; border-radius: 50%; background: rgba(45, 91, 227, 0.4); cursor: pointer; transition: all 0.3s ease;"></div>';
+            html += '</div>';
+            html += '</div>';
+            
+            // Info de imágenes
+            html += '<div style="display: flex; gap: 8px; flex-wrap: wrap;">';
+            html += '<span style="padding: 4px 10px; background: #e6eaff; color: #2d5be3; border-radius: 16px; font-size: 0.85em; font-weight: 600;">📸 Listado</span>';
+            html += '<span style="padding: 4px 10px; background: #e6eaff; color: #2d5be3; border-radius: 16px; font-size: 0.85em; font-weight: 600;">📸 Detalles</span>';
+            html += '</div>';
+            html += '</div>';
+            
+            // COLUMNA DERECHA: Formulario
+            html += '<div style="display: flex; flex-direction: column; gap: 15px; overflow-y: auto; max-height: 70vh;">';
+            
+            // Sección: Información Básica
+            html += '<div class="form-section">';
+            html += '<h4>📋 Información Básica</h4>';
+            html += '<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">';
+            html += '<div class="form-group"><label style="margin-bottom: 6px;">Código</label><input type="text" name="codigo" value="' + producto.codigo + '"></div>';
+            html += '<div class="form-group"><label style="margin-bottom: 6px;">Nombre</label><input type="text" name="nombre" value="' + producto.nombre + '"></div>';
+            html += '</div>';
+            html += '<div class="form-group"><label style="margin-bottom: 6px;">Descripción</label><textarea name="descripcion" style="min-height: 70px;">' + (producto.descripcion || '') + '</textarea></div>';
+            html += '</div>';
+            
+            // Sección: Precio y Categoría
+            html += '<div class="form-section">';
+            html += '<h4>💰 Precio y Categoría</h4>';
+            html += '<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">';
+            html += '<div class="form-group"><label style="margin-bottom: 6px;">Precio</label><input type="number" name="precio" value="' + producto.precio + '" step="0.01"></div>';
+            html += '<div class="form-group"><label style="margin-bottom: 6px;">Categoría</label><select name="categoria"><option>' + producto.categoria + '</option><option>celulares</option><option>laptops</option><option>televisores</option><option>refrigeradoras</option><option>lavadoras</option></select></div>';
+            html += '</div>';
+            html += '</div>';
+            
+            // Sección: Clasificación
+            html += '<div class="form-section">';
+            html += '<h4>🏷️ Clasificación</h4>';
+            html += '<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">';
+            html += '<div class="form-group"><label style="margin-bottom: 6px;">Segmento</label><select name="segmento"><option value="fnb" ' + (producto.segmento === 'fnb' ? 'selected' : '') + '>FNB</option><option value="gaso" ' + (producto.segmento === 'gaso' ? 'selected' : '') + '>GASO</option></select></div>';
+            html += '<div class="form-group"><label style="margin-bottom: 6px;">Estado</label><select name="estado"><option value="disponible" ' + (producto.estado === 'disponible' ? 'selected' : '') + '>Disponible</option><option value="no disponible" ' + (producto.estado === 'no disponible' ? 'selected' : '') + '>No Disponible</option><option value="agotado" ' + (producto.estado === 'agotado' ? 'selected' : '') + '>Agotado</option></select></div>';
+            html += '</div>';
+            html += '<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">';
+            html += '<div class="form-group"><label style="margin-bottom: 6px;">Mes</label><select name="mes">';
+            const meses = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
+            meses.forEach(mes => {
+                html += '<option value="' + mes + '" ' + (producto.mes === mes ? 'selected' : '') + '>' + mes.charAt(0).toUpperCase() + mes.slice(1) + '</option>';
+            });
+            html += '</select></div>';
+            html += '<div class="form-group"><label style="margin-bottom: 6px;">Año</label><select name="ano"><option value="2024" ' + (producto.ano === 2024 ? 'selected' : '') + '>2024</option><option value="2025" ' + (producto.ano === 2025 ? 'selected' : '') + '>2025</option><option value="2026" ' + (producto.ano === 2026 ? 'selected' : '') + '>2026</option><option value="2027" ' + (producto.ano === 2027 ? 'selected' : '') + '>2027</option></select></div>';
+            html += '</div>';
+            html += '</div>';
+            
+            // Sección: Imágenes
+            html += '<div class="form-section">';
+            html += '<h4>🖼️ Imágenes</h4>';
+            html += '<div class="form-group"><label style="margin-bottom: 6px;">Imagen Listado</label><select name="imagen_listado"><option value="' + producto.imagen_listado + '">' + producto.imagen_listado + '</option></select></div>';
+            html += '<div class="form-group"><label style="margin-bottom: 6px;">Imagen Características</label><select name="imagen_caracteristicas"><option value="' + producto.imagen_caracteristicas + '">' + producto.imagen_caracteristicas + '</option></select></div>';
+            html += '</div>';
+            
+            // Sección: Cuotas
+            html += '<div class="form-section">';
+            html += '<h4>📊 Cuotas (JSON)</h4>';
+            html += '<div class="form-group"><textarea name="cuotas" style="min-height: 100px; font-family: \'Courier New\', monospace; font-size: 0.85em;">' + JSON.stringify(producto.cuotas, null, 2) + '</textarea></div>';
+            html += '</div>';
+            
+            // Botones de acción
+            html += '<div style="display: flex; gap: 10px; margin-top: 10px; border-top: 1px solid #e0e0e0; padding-top: 15px;">';
+            html += '<button id="btn-guardar" type="button" style="flex: 1; padding: 10px; background: #2d5be3; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 0.95em;">💾 Guardar</button>';
+            html += '<button id="btn-eliminar-det" type="button" style="flex: 1; padding: 10px; background: #f5576c; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 0.95em;">🗑️ Eliminar</button>';
+            html += '</div>';
+            html += '</div>';
+            
+            html += '</div>';
+            
+            modal.querySelector('#contenido-modal').innerHTML = html;
+            
+            // Cargar imágenes dinámicamente
+            const segmento = modal.querySelector('select[name="segmento"]').value;
+            const ano = modal.querySelector('select[name="ano"]').value;
+            const mes = modal.querySelector('select[name="mes"]').value;
+            const categoria = modal.querySelector('select[name="categoria"]').value;
+            await cargarImagenesDisponibles(segmento, ano, mes, categoria);
+            
+            // Actualizar selects de imágenes
+            actualizarSelectImagenesEnModal(modal);
+            
+            // Cargar imágenes con la categoría actual del producto
+            const segmentoActual = modal.querySelector('select[name="segmento"]').value;
+            const anoActual = modal.querySelector('select[name="ano"]').value;
+            const mesActual = modal.querySelector('select[name="mes"]').value;
+            const categoriaActual = producto.categoria;
+            await cargarImagenesDisponibles(segmentoActual, anoActual, mesActual, categoriaActual);
+            actualizarSelectImagenesEnModal(modal);
+            
+            // Event listeners para filtros
+            const filtros = modal.querySelectorAll('select[name="segmento"], select[name="ano"], select[name="mes"], select[name="categoria"]');
+            filtros.forEach(filtro => {
+                filtro.addEventListener('change', async () => {
+                    const seg = modal.querySelector('select[name="segmento"]').value;
+                    const an = modal.querySelector('select[name="ano"]').value;
+                    const m = modal.querySelector('select[name="mes"]').value;
+                    const cat = modal.querySelector('select[name="categoria"]').value;
+                    await cargarImagenesDisponibles(seg, an, m, cat);
+                    actualizarSelectImagenesEnModal(modal);
+                });
+            });
+            
+            // Event listeners para actualizar carrusel en tiempo real
+            const selectListado = modal.querySelector('select[name="imagen_listado"]');
+            const selectCaracteristicas = modal.querySelector('select[name="imagen_caracteristicas"]');
+            const slides = modal.querySelectorAll('.slide');
+            
+            if (selectListado && slides.length > 0) {
+                selectListado.addEventListener('change', (e) => {
+                    const imgSlide = slides[0].querySelector('img');
+                    if (imgSlide) {
+                        imgSlide.src = e.target.value;
+                    }
+                });
+            }
+            
+            if (selectCaracteristicas && slides.length > 1) {
+                selectCaracteristicas.addEventListener('change', (e) => {
+                    const imgSlide = slides[1].querySelector('img');
+                    if (imgSlide) {
+                        imgSlide.src = e.target.value;
+                    }
+                });
+            }
+            
+            // Botones de acción
+            modal.querySelector('#btn-guardar').addEventListener('click', async () => {
+                await guardarEdicionDesdeModal(modal);
+            });
+            
+            modal.querySelector('#btn-eliminar-det').addEventListener('click', async () => {
+                if (confirm('⚠️ ¿Estás seguro de que deseas eliminar este producto?')) {
+                    await eliminarProducto(producto.id);
+                    document.getElementById('detalleModal').remove();
+                }
+            });
+            
+            // Inicializar slider
+            await new Promise(r => setTimeout(r, 0));
+            inicializarSlider(modal);
+        }
+        
+        function actualizarSelectImagenesEnModal(modal) {
+            const selectListado = modal.querySelector('select[name="imagen_listado"]');
+            const selectCaracteristicas = modal.querySelector('select[name="imagen_caracteristicas"]');
+            
+            if (selectListado && imagenesDisponibles.listado) {
+                let options = '<option value="' + (productoEnEdicion.imagen_listado || '') + '">' + (productoEnEdicion.imagen_listado || 'Seleccionar...') + '</option>';
+                for (const [key, imagenes] of Object.entries(imagenesDisponibles.listado)) {
+                    imagenes.forEach(img => {
+                        options += `<option value="${img.url}">${key} - ${img.nombre}</option>`;
                     });
-                }, 0);
+                }
+                selectListado.innerHTML = options;
+            }
+            
+            if (selectCaracteristicas && imagenesDisponibles.caracteristicas) {
+                let options = '<option value="' + (productoEnEdicion.imagen_caracteristicas || '') + '">' + (productoEnEdicion.imagen_caracteristicas || 'Seleccionar...') + '</option>';
+                for (const [key, imagenes] of Object.entries(imagenesDisponibles.caracteristicas)) {
+                    imagenes.forEach(img => {
+                        options += `<option value="${img.url}">${key} - ${img.nombre}</option>`;
+                    });
+                }
+                selectCaracteristicas.innerHTML = options;
+            }
+        }
+        
+        async function cargarVistaDetalle(modal, producto) {
+            let html = '<div style="margin-bottom: 30px;">';
+            html += '<div style="position: relative; width: 100%; max-width: 600px; margin: 0 auto; background: #f9fafd; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">';
+            
+            // Contenedor del slider
+            html += '<div id="imagen-slider" style="position: relative; width: 100%; padding-bottom: 100%; background: #f9fafd;">';
+            
+            // Imagen Listado
+            if (producto.imagen_listado && producto.imagen_listado.trim() !== '') {
+                html += `<div class="slide" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; opacity: 1; transition: opacity 0.3s ease;">
+                            <img src="${producto.imagen_listado}" style="width: 100%; height: 100%; object-fit: contain; display: block;">
+                        </div>`;
+            } else {
+                html += `<div class="slide" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; opacity: 1; transition: opacity 0.3s ease; background: #f9fafd; color: #999; font-size: 1em;">Sin imagen de listado</div>`;
+            }
+            
+            // Imagen Características
+            if (producto.imagen_caracteristicas && producto.imagen_caracteristicas.trim() !== '') {
+                html += `<div class="slide" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; opacity: 0; transition: opacity 0.3s ease;">
+                            <img src="${producto.imagen_caracteristicas}" style="width: 100%; height: 100%; object-fit: contain; display: block;">
+                        </div>`;
+            } else {
+                html += `<div class="slide" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; opacity: 0; transition: opacity 0.3s ease; background: #f9fafd; color: #999; font-size: 1em;">Sin imagen de características</div>`;
+            }
+            
+            html += '</div>';
+            
+            // Botones de navegación
+            html += '<button class="slide-prev" style="position: absolute; top: 50%; left: 15px; transform: translateY(-50%); background: rgba(45, 91, 227, 0.8); color: white; border: none; width: 40px; height: 40px; border-radius: 50%; cursor: pointer; font-size: 20px; display: flex; align-items: center; justify-content: center; z-index: 10; transition: background 0.3s ease;">‹</button>';
+            html += '<button class="slide-next" style="position: absolute; top: 50%; right: 15px; transform: translateY(-50%); background: rgba(45, 91, 227, 0.8); color: white; border: none; width: 40px; height: 40px; border-radius: 50%; cursor: pointer; font-size: 20px; display: flex; align-items: center; justify-content: center; z-index: 10; transition: background 0.3s ease;">›</button>';
+            
+            // Indicadores de slide
+            html += '<div style="position: absolute; bottom: 15px; left: 50%; transform: translateX(-50%); display: flex; gap: 8px; z-index: 10;">';
+            html += '<div class="slide-indicator active" style="width: 10px; height: 10px; border-radius: 50%; background: #2d5be3; cursor: pointer; transition: all 0.3s ease;"></div>';
+            html += '<div class="slide-indicator" style="width: 10px; height: 10px; border-radius: 50%; background: rgba(45, 91, 227, 0.4); cursor: pointer; transition: all 0.3s ease;"></div>';
+            html += '</div>';
+            
+            html += '</div>';
+            html += '</div>';
+            
+            html += '<div style="margin-bottom: 30px; padding-bottom: 30px; border-bottom: 1px solid #e0e0e0;">';
+            html += '<div style="display: flex; gap: 15px; justify-content: center;">';
+            html += '<span style="padding: 6px 12px; background: #e6eaff; color: #2d5be3; border-radius: 20px; font-size: 0.9em; font-weight: 600;">📸 Imagen Listado</span>';
+            html += '<span style="padding: 6px 12px; background: #e6eaff; color: #2d5be3; border-radius: 20px; font-size: 0.9em; font-weight: 600;">📸 Imagen Características</span>';
+            html += '</div>';
+            html += '</div>';
+            
+            html += '<div style="margin-top: 30px; padding-top: 30px; border-top: 1px solid #e0e0e0;">';
+            html += `<h4 style="color: #2d5be3; margin-bottom: 15px;">📋 Información del Producto</h4>`;
+            html += `<table style="width: 100%; border-collapse: collapse;">
+                <tr style="border-bottom: 1px solid #e0e0e0;">
+                    <td style="padding: 10px 0; font-weight: 600; width: 150px;">Código:</td>
+                    <td style="padding: 10px 0;">${producto.codigo}</td>
+                </tr>
+                <tr style="border-bottom: 1px solid #e0e0e0;">
+                    <td style="padding: 10px 0; font-weight: 600;">Nombre:</td>
+                    <td style="padding: 10px 0;">${producto.nombre}</td>
+                </tr>
+                <tr style="border-bottom: 1px solid #e0e0e0;">
+                    <td style="padding: 10px 0; font-weight: 600;">Precio:</td>
+                    <td style="padding: 10px 0; color: #2d5be3; font-weight: 700;">S/. ${producto.precio.toFixed(2)}</td>
+                </tr>
+                <tr style="border-bottom: 1px solid #e0e0e0;">
+                    <td style="padding: 10px 0; font-weight: 600;">Categoría:</td>
+                    <td style="padding: 10px 0;">${producto.categoria}</td>
+                </tr>
+                <tr style="border-bottom: 1px solid #e0e0e0;">
+                    <td style="padding: 10px 0; font-weight: 600;">Segmento:</td>
+                    <td style="padding: 10px 0;">${producto.segmento.toUpperCase()}</td>
+                </tr>
+                <tr style="border-bottom: 1px solid #e0e0e0;">
+                    <td style="padding: 10px 0; font-weight: 600;">Estado:</td>
+                    <td style="padding: 10px 0;">${producto.estado}</td>
+                </tr>
+                <tr style="border-bottom: 1px solid #e0e0e0;">
+                    <td style="padding: 10px 0; font-weight: 600;">Mes:</td>
+                    <td style="padding: 10px 0;">${producto.mes}</td>
+                </tr>
+                <tr>
+                    <td style="padding: 10px 0; font-weight: 600;">Descripción:</td>
+                    <td style="padding: 10px 0;">${producto.descripcion || 'N/A'}</td>
+                </tr>
+            </table>`;
+            html += '</div>';
+            
+            modal.querySelector('#contenido-detalle').innerHTML = html;
+            
+            // Inicializar slider
+            await new Promise(r => setTimeout(r, 0));
+            inicializarSlider(modal);
+        }
+        
+        function inicializarSlider(container) {
+            let currentSlide = 0;
+            const slides = container.querySelectorAll('.slide');
+            const indicators = container.querySelectorAll('.slide-indicator');
+            
+            const showSlide = (n) => {
+                slides.forEach(slide => slide.style.opacity = '0');
+                indicators.forEach(ind => ind.classList.remove('active'));
+                
+                if (n >= slides.length) currentSlide = 0;
+                if (n < 0) currentSlide = slides.length - 1;
+                
+                slides[currentSlide].style.opacity = '1';
+                if (indicators[currentSlide]) {
+                    indicators[currentSlide].classList.add('active');
+                }
+            };
+            
+            const nextSlide = () => {
+                currentSlide++;
+                showSlide(currentSlide);
+            };
+            
+            const prevSlide = () => {
+                currentSlide--;
+                showSlide(currentSlide);
+            };
+            
+            // Event listeners para botones de navegación
+            const prevBtn = container.querySelector('.slide-prev');
+            const nextBtn = container.querySelector('.slide-next');
+            
+            if (prevBtn) prevBtn.addEventListener('click', prevSlide);
+            if (nextBtn) nextBtn.addEventListener('click', nextSlide);
+            
+            // Event listeners para indicadores
+            indicators.forEach((indicator, index) => {
+                indicator.addEventListener('click', () => {
+                    currentSlide = index;
+                    showSlide(currentSlide);
+                });
+            });
+            
+            // Hover effects
+            const buttons = container.querySelectorAll('.slide-prev, .slide-next');
+            buttons.forEach(btn => {
+                btn.addEventListener('mouseenter', () => {
+                    btn.style.background = 'rgba(45, 91, 227, 1)';
+                });
+                btn.addEventListener('mouseleave', () => {
+                    btn.style.background = 'rgba(45, 91, 227, 0.8)';
+                });
+            });
+            
+            // Inicializar slide
+            showSlide(currentSlide);
+        }
+        
+        async function cargarVistaEdicion(modal, producto) {
+            let formHtml = '';
+            const campos = ['codigo', 'nombre', 'descripcion', 'precio', 'categoria', 'segmento', 'estado', 'mes', 'ano', 'imagen_listado', 'imagen_caracteristicas'];
+            
+            formHtml = '<div class="grid">';
+            campos.forEach((key) => {
+                const value = producto[key];
+                const gridSpan = (key === 'descripcion' || key === 'imagen_listado' || key === 'imagen_caracteristicas') ? ' style="grid-column: 1/-1;"' : '';
+                
+                if (key === 'descripcion' || key === 'imagen_listado' || key === 'imagen_caracteristicas') {
+                    if (key === 'imagen_listado') {
+                        let optionsListado = '<option value="' + value + '">' + value + '</option>';
+                        for (const [loc, imagenes] of Object.entries(imagenesDisponibles.listado)) {
+                            imagenes.forEach(img => {
+                                optionsListado += '<option value="' + img.url + '">' + loc + ' - ' + img.nombre + '</option>';
+                            });
+                        }
+                        formHtml += '<div class="form-group"' + gridSpan + '><label>' + key + '</label><select name="' + key + '">' + optionsListado + '</select></div>';
+                    } else if (key === 'imagen_caracteristicas') {
+                        let optionsCarac = '<option value="' + value + '">' + value + '</option>';
+                        for (const [loc, imagenes] of Object.entries(imagenesDisponibles.caracteristicas)) {
+                            imagenes.forEach(img => {
+                                optionsCarac += '<option value="' + img.url + '">' + loc + ' - ' + img.nombre + '</option>';
+                            });
+                        }
+                        formHtml += '<div class="form-group"' + gridSpan + '><label>' + key + '</label><select name="' + key + '">' + optionsCarac + '</select></div>';
+                    } else {
+                        formHtml += '<div class="form-group"' + gridSpan + '><label>' + key + '</label><textarea name="' + key + '">' + (value || '') + '</textarea></div>';
+                    }
+                } else if (key === 'categoria') {
+                    formHtml += '<div class="form-group"><label>' + key + '</label><select name="' + key + '"><option>' + value + '</option><option>celulares</option><option>laptops</option><option>televisores</option><option>refrigeradoras</option><option>lavadoras</option></select></div>';
+                } else if (key === 'segmento') {
+                    formHtml += '<div class="form-group"><label>' + key + '</label><select name="' + key + '"><option value="fnb" ' + (value === 'fnb' ? 'selected' : '') + '>FNB</option><option value="gaso" ' + (value === 'gaso' ? 'selected' : '') + '>GASO</option></select></div>';
+                } else if (key === 'estado') {
+                    formHtml += '<div class="form-group"><label>' + key + '</label><select name="' + key + '"><option value="disponible" ' + (value === 'disponible' ? 'selected' : '') + '>Disponible</option><option value="no disponible" ' + (value === 'no disponible' ? 'selected' : '') + '>No Disponible</option><option value="agotado" ' + (value === 'agotado' ? 'selected' : '') + '>Agotado</option></select></div>';
+                } else if (key === 'mes') {
+                    const meses = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
+                    let selectMes = '<div class="form-group"><label>' + key + '</label><select name="' + key + '">';
+                    meses.forEach(mes => {
+                        selectMes += '<option value="' + mes + '" ' + (value === mes ? 'selected' : '') + '>' + mes.charAt(0).toUpperCase() + mes.slice(1) + '</option>';
+                    });
+                    selectMes += '</select></div>';
+                    formHtml += selectMes;
+                } else if (key === 'ano') {
+                    let selectAno = '<div class="form-group"><label>' + key + '</label><select name="' + key + '"><option value="2024" ' + (value === 2024 ? 'selected' : '') + '>2024</option><option value="2025" ' + (value === 2025 ? 'selected' : '') + '>2025</option><option value="2026" ' + (value === 2026 ? 'selected' : '') + '>2026</option><option value="2027" ' + (value === 2027 ? 'selected' : '') + '>2027</option></select></div>';
+                    formHtml += selectAno;
+                } else {
+                    const type = key === 'precio' ? 'number' : 'text';
+                    const step = key === 'precio' ? ' step="0.01"' : '';
+                    formHtml += '<div class="form-group"><label>' + key + '</label><input type="' + type + '" name="' + key + '" value="' + value + '"' + step + '></div>';
+                }
+            });
+            formHtml += '</div>';
+            
+            formHtml += '<div class="form-group" style="grid-column: 1/-1;"><label>cuotas (JSON)</label><textarea name="cuotas" style="min-height: 150px;">' + JSON.stringify(producto.cuotas, null, 2) + '</textarea></div>';
+            
+            formHtml += '<div style="display: flex; gap: 10px; margin-top: 20px;">';
+            formHtml += '<button type="button" id="btn-guardar-edicion" style="flex: 1; padding: 12px;">💾 Guardar Cambios</button>';
+            formHtml += '<button type="button" id="btn-eliminar" class="danger" style="flex: 1; padding: 12px;">🗑️ Eliminar</button>';
+            formHtml += '</div>';
+            
+            modal.querySelector('#contenido-edicion').innerHTML = formHtml;
+            
+            // Event listeners
+            modal.querySelector('#btn-guardar-edicion').addEventListener('click', async () => {
+                await guardarEdicionDesdeModal(modal);
+            });
+            
+            modal.querySelector('#btn-eliminar').addEventListener('click', async () => {
+                if (confirm('⚠️ ¿Estás seguro de que deseas eliminar este producto?')) {
+                    await eliminarProducto(producto.id);
+                    document.getElementById('detalleModal').remove();
+                }
+            });
+        }
+        
+        async function guardarEdicionDesdeModal(modal) {
+            try {
+                const formData = new FormData(modal.querySelector('form') || document.createElement('form'));
+                
+                // Recopilar datos manualmente del modal
+                const data = {
+                    codigo: modal.querySelector('input[name="codigo"]')?.value || productoEnEdicion.codigo,
+                    nombre: modal.querySelector('input[name="nombre"]')?.value || productoEnEdicion.nombre,
+                    descripcion: modal.querySelector('textarea[name="descripcion"]')?.value || productoEnEdicion.descripcion,
+                    precio: parseFloat(modal.querySelector('input[name="precio"]')?.value) || productoEnEdicion.precio,
+                    categoria: modal.querySelector('select[name="categoria"]')?.value || productoEnEdicion.categoria,
+                    imagen_listado: modal.querySelector('select[name="imagen_listado"]')?.value || productoEnEdicion.imagen_listado,
+                    imagen_caracteristicas: modal.querySelector('select[name="imagen_caracteristicas"]')?.value || productoEnEdicion.imagen_caracteristicas,
+                    cuotas: JSON.parse(modal.querySelector('textarea[name="cuotas"]')?.value || JSON.stringify(productoEnEdicion.cuotas)),
+                    mes: modal.querySelector('select[name="mes"]')?.value || productoEnEdicion.mes,
+                    ano: parseInt(modal.querySelector('select[name="ano"]')?.value) || productoEnEdicion.ano,
+                    segmento: modal.querySelector('select[name="segmento"]')?.value || productoEnEdicion.segmento,
+                    estado: modal.querySelector('select[name="estado"]')?.value || productoEnEdicion.estado
+                };
+
+                const response = await fetch('/api/productos/' + productoEnEdicion.id, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+
+                if (response.ok) {
+                    mostrarAlerta('✅ Producto actualizado exitosamente', 'success');
+                    document.getElementById('detalleModal').remove();
+                    cargarProductos();
+                } else {
+                    const error = await response.json();
+                    mostrarAlerta('❌ Error: ' + (error.detail || 'Error desconocido'), 'error');
+                }
             } catch(e) {
                 mostrarAlerta('❌ Error: ' + e.message, 'error');
             }
         }
 
-        async function abrirEditModal(id) {
-            try {
-                const response = await fetch('/api/productos/' + id);
-                const producto = await response.json();
-                productoEnEdicion = producto;
-                
-                let formHtml = '';
-                const campos = ['codigo', 'nombre', 'descripcion', 'precio', 'categoria', 'segmento', 'estado', 'imagen_listado', 'imagen_caracteristicas', 'mes', 'ano'];
-                
-                campos.forEach((key, idx) => {
-                    const value = producto[key];
-                    const gridSpan = (key === 'descripcion' || key === 'imagen_listado' || key === 'imagen_caracteristicas') ? ' style="grid-column: 1/-1;"' : '';
-                    
-                    if (key === 'descripcion' || key === 'imagen_listado' || key === 'imagen_caracteristicas') {
-                        formHtml += '<div class="form-group"' + gridSpan + '><label>' + key + '</label><textarea name="' + key + '">' + (value || '') + '</textarea></div>';
-                    } else if (key === 'categoria') {
-                        formHtml += '<div class="form-group"><label>' + key + '</label><select name="' + key + '"><option>' + value + '</option><option>celulares</option><option>laptops</option><option>televisores</option><option>refrigeradoras</option><option>lavadoras</option></select></div>';
-                    } else if (key === 'segmento') {
-                        formHtml += '<div class="form-group"><label>' + key + '</label><select name="' + key + '"><option value="fnb" ' + (value === 'fnb' ? 'selected' : '') + '>FNB</option><option value="gaso" ' + (value === 'gaso' ? 'selected' : '') + '>GASO</option></select></div>';
-                    } else if (key === 'estado') {
-                        formHtml += '<div class="form-group"><label>' + key + '</label><select name="' + key + '"><option value="disponible" ' + (value === 'disponible' ? 'selected' : '') + '>Disponible</option><option value="no disponible" ' + (value === 'no disponible' ? 'selected' : '') + '>No Disponible</option><option value="agotado" ' + (value === 'agotado' ? 'selected' : '') + '>Agotado</option></select></div>';
-                    } else {
-                        const type = key === 'precio' || key === 'ano' ? 'number' : 'text';
-                        const step = key === 'precio' ? ' step="0.01"' : '';
-                        formHtml += '<div class="form-group"><label>' + key + '</label><input type="' + type + '" name="' + key + '" value="' + value + '"' + step + '></div>';
-                    }
-                });
-                
-                formHtml += '<div class="form-group" style="grid-column: 1/-1;"><label>cuotas (JSON)</label><textarea name="cuotas">' + JSON.stringify(producto.cuotas) + '</textarea></div>';
-                
-                document.getElementById('editFormFields').innerHTML = formHtml;
-                document.getElementById('editModal').classList.add('show');
-            } catch(e) {
-                mostrarAlerta('❌ Error: ' + e.message, 'error');
-            }
-        }
 
         function cerrarModal() {
             document.getElementById('editModal').classList.remove('show');
@@ -972,6 +1683,9 @@
             container.appendChild(alert);
             setTimeout(() => alert.remove(), 4000);
         }
+
+        // Cargar imágenes disponibles al iniciar
+        document.addEventListener('DOMContentLoaded', cargarImagenesDisponibles);
     </script>
 </body>
 </html>
