@@ -121,8 +121,11 @@ async def root():
                 "catalogo_gaso_diciembre_2025": "/api/catalogo/gaso/2025/12-diciembre",
                 "celulares_fnb": "/api/catalogo/fnb/2025/12-diciembre/1-celulares",
                 "televisores_gaso": "/api/catalogo/gaso/2025/12-diciembre/2-televisores",
-                "catalogo_completo_fnb": "/api/catalogo-completo/fnb/2025/12-diciembre",
-                "catalogo_completo_activo": "/api/catalogo-completo/fnb/activo",
+                "pdf_catalogo_completo_fnb": "/api/catalogo-completo/fnb/2025/12-diciembre",
+                "pdf_catalogo_completo_gaso": "/api/catalogo-completo/gaso/2025/12-diciembre",
+                "listar_pdfs_fnb": "/api/pdfs/fnb/2025/12-diciembre",
+                "listar_pdfs_gaso": "/api/pdfs/gaso/2025/12-diciembre",
+                "pdf_categoria_celulares": "/api/pdf/fnb/2025/12-diciembre/1-celulares",
                 "imagen_caracteristica": "/api/catalogos/fnb/2025/11-noviembre/1-celulares/caracteristicas/01.png",
             },
         }
@@ -425,7 +428,7 @@ async def obtener_pdf_categoria(segmento: str, anio: str, mes: str, categoria: s
 
 @app.get("/api/pdfs/{segmento}/{anio}/{mes}")
 async def listar_pdfs_mes(segmento: str, anio: str, mes: str):
-    """Lista todos los PDFs disponibles en un mes"""
+    """Lista todos los PDFs disponibles en un mes, incluyendo el catálogo completo"""
     try:
         pdfs = catalogo_mgr.listar_pdfs_mes(anio, mes, segmento)
 
@@ -445,11 +448,23 @@ async def listar_pdfs_mes(segmento: str, anio: str, mes: str):
             else:
                 pdfs_con_urls[categoria] = None
 
+        # Verificar si existe catálogo completo en la raíz del mes
+        catalogo_completo = catalogo_mgr.obtener_pdf_catalogo_completo(
+            anio, mes, segmento
+        )
+        catalogo_completo_info = None
+        if catalogo_completo and catalogo_completo.exists():
+            catalogo_completo_info = {
+                "nombre": catalogo_completo.name,
+                "url": f"{SERVER_URL}/api/catalogo-completo/{segmento}/{anio}/{mes}",
+            }
+
         return {
             "segmento": segmento,
             "año": anio,
             "mes": mes,
-            "pdfs_disponibles": pdfs_con_urls,
+            "catalogo_completo": catalogo_completo_info,
+            "pdfs_por_categoria": pdfs_con_urls,
             "total_pdfs": sum(1 for v in pdfs.values() if v is not None),
         }
 
