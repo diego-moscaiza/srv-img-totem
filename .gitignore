@@ -24,3 +24,8 @@ env/
 
 # Imágenes y catálogos
 imagenes/
+
+# Base de datos (contiene datos variables)
+catalogos.db
+*.db
+
