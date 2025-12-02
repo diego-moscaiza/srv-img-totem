@@ -5,8 +5,16 @@ Este script crea la tabla 'productos' con la estructura completa y actualizada
 
 import sqlite3
 import os
+from pathlib import Path
 
-DB_PATH = "catalogos.db"
+# Determinar ruta de BD: usar volumen persistente en Docker, o carpeta local en desarrollo
+if os.path.exists("/srv/data"):
+    DB_PATH = "/srv/data/catalogos.db"
+else:
+    DB_PATH = "catalogos.db"
+
+# Crear directorio si no existe
+Path(DB_PATH).parent.mkdir(parents=True, exist_ok=True)
 
 
 def create_database():
