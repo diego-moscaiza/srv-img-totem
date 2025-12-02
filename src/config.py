@@ -17,6 +17,6 @@ CONFIG_INFO = {
     "database_url": DATABASE_URL,
 }
 
-print(f"✓ Configuración cargada desde .env")
+print(f"[OK] Configuracion cargada desde .env")
 print(f"  - SERVER_URL: {SERVER_URL}")
 print(f"  - IMAGENES_DIR: {IMAGENES_DIR}")
