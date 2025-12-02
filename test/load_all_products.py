@@ -87,12 +87,18 @@ def cargar_todos_productos():
                         # Buscar imágenes SOLO en carpeta precios/
                         precios_dir = cat_dir / "precios"
 
-                        # Obtener imágenes de precios
-                        imagenes_precios = (
-                            sorted(precios_dir.glob("*.png"))
-                            if precios_dir.exists()
-                            else []
-                        )
+                        # Obtener imágenes de precios (cualquier formato)
+                        imagenes_precios = []
+                        if precios_dir.exists():
+                            imagenes_precios = sorted(
+                                list(precios_dir.glob("*.png")) + 
+                                list(precios_dir.glob("*.jpg")) + 
+                                list(precios_dir.glob("*.jpeg")) + 
+                                list(precios_dir.glob("*.JPG")) + 
+                                list(precios_dir.glob("*.JPEG")) +
+                                list(precios_dir.glob("*.gif")) +
+                                list(precios_dir.glob("*.webp"))
+                            )
 
                         # Crear un producto por cada imagen de precios
                         for idx, img_precio in enumerate(imagenes_precios, 1):
