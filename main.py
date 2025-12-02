@@ -2,6 +2,7 @@ from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse, JSONResponse, HTMLResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 import os
+import urllib.parse
 from pathlib import Path
 from typing import List, Dict
 from src.catalogos_manager import CatalogoManager
@@ -44,60 +45,94 @@ class InlinePDFResponse(FileResponse):
 
 @app.get("/")
 async def root():
-    segmentos = catalogo_mgr.obtener_segmentos_disponibles()
-    return {
-        "message": "Servidor de catálogos dinámicos funcionando",
-        "admin": "/admin",
-        "docs": "/docs",
-        "segmentos_disponibles": segmentos,
-        "endpoints": {
-            "segmentos": {
-                "listar_segmentos": "/api/segmentos",
+    """Endpoint raíz con información del sistema de catálogos"""
+    try:
+        segmentos = catalogo_mgr.obtener_segmentos_disponibles()
+        meses_disponibles = catalogo_mgr.obtener_meses_disponibles()
+
+        # Construir información de catálogos disponibles en el sistema de archivos
+        catalogos_disponibles = {}
+        for segmento in segmentos:
+            ruta_segmento = Path(IMAGENES_DIR) / "catalogos" / segmento / "2025"
+            if ruta_segmento.exists():
+                meses = [d.name for d in ruta_segmento.iterdir() if d.is_dir()]
+                catalogos_disponibles[segmento] = meses
+
+        return {
+            "message": "Servidor de catálogos dinámicos funcionando",
+            "version": "2.0.0",
+            "estado": "activo",
+            "info": {
+                "segmentos_disponibles": segmentos,
+                "catalogos_disponibles_por_segmento": catalogos_disponibles,
+                "meses_con_productos_bd": meses_disponibles,
             },
-            "catalogos": {
-                "catalogo_activo": "/api/catalogo/{segmento}/activo",
-                "catalogo_mes": "/api/catalogo/{segmento}/{año}/{mes}",
-                "categorias": "/api/catalogo/{segmento}/{año}/{mes}/{categoria}",
-                "meses_disponibles": "/api/meses-disponibles",
-            },
-            "productos": {
-                "listar_todos": "/api/productos",
-                "obtener_uno": "/api/productos/{producto_id}",
-                "crear": "POST /api/productos",
-                "actualizar": "PUT /api/productos/{producto_id}",
-                "eliminar": "DELETE /api/productos/{producto_id}",
-                "producto_detallado": "/api/catalogo/{segmento}/{año}/{mes}/{categoria}/{producto_id}",
-                "obtener_imagen": "/api/imagen/{segmento}/{año}/{mes}/{categoria}/{producto_id}/{tipo_imagen}",
-                "nota_tipos_imagen": "tipo_imagen: 'caracteristicas' o 'precios'",
-            },
-            "imagenes": {
-                "por_nombre": "/ver/{nombre_archivo}",
-                "por_disponibilidad": "/api/imagenes-disponibles",
-                "por_ruta_catalogos": "/api/catalogos/{ruta_completa}",
-                "por_ruta_legacy": "/ver-ruta/{ruta_completa}",
-            },
-            "pdfs": {
-                "pdf_categoria": "/api/pdf/{segmento}/{año}/{mes}/{categoria}",
-                "pdfs_mes": "/api/pdfs/{segmento}/{año}/{mes}",
-                "pdf_categoria_activo": "/api/pdf/{segmento}/activo/{categoria}",
-                "pdfs_mes_activo": "/api/pdfs/{segmento}/activo",
-            },
-            "admin": {
-                "panel": "/api/admin",
-                "validar_producto": "POST /api/validar-producto",
-            },
-            "utilidades": {
+            "navegacion": {
+                "admin": "/admin",
+                "docs": "/docs",
                 "diagnostico": "/diagnostico",
+            },
+            "endpoints": {
+                "segmentos": {
+                    "listar_segmentos": "/api/segmentos",
+                },
+                "catalogos": {
+                    "catalogo_activo": "/api/catalogo/{segmento}/activo",
+                    "catalogo_mes": "/api/catalogo/{segmento}/{año}/{mes}",
+                    "categorias": "/api/catalogo/{segmento}/{año}/{mes}/{categoria}",
+                    "meses_disponibles": "/api/meses-disponibles",
+                },
+                "productos": {
+                    "listar_todos": "/api/productos",
+                    "obtener_uno": "/api/productos/{producto_id}",
+                    "crear": "POST /api/productos",
+                    "actualizar": "PUT /api/productos/{producto_id}",
+                    "eliminar": "DELETE /api/productos/{producto_id}",
+                    "producto_detallado": "/api/catalogo/{segmento}/{año}/{mes}/{categoria}/{producto_id}",
+                    "obtener_imagen": "/api/imagen/{segmento}/{año}/{mes}/{categoria}/{producto_id}/{tipo_imagen}",
+                    "nota_tipos_imagen": "tipo_imagen: 'caracteristicas' o 'precios'",
+                },
+                "imagenes": {
+                    "por_nombre": "/ver/{nombre_archivo}",
+                    "por_disponibilidad": "/api/imagenes-disponibles",
+                    "por_ruta_catalogos": "/api/catalogos/{ruta_completa}",
+                    "por_ruta_legacy": "/ver-ruta/{ruta_completa}",
+                },
+                "pdfs": {
+                    "pdf_categoria": "/api/pdf/{segmento}/{año}/{mes}/{categoria}",
+                    "pdfs_mes": "/api/pdfs/{segmento}/{año}/{mes}",
+                    "ver_pdf": "/api/ver-pdf/{ruta_completa}",
+                    "pdf_categoria_activo": "/api/pdf/{segmento}/activo/{categoria}",
+                    "pdfs_mes_activo": "/api/pdfs/{segmento}/activo",
+                    "catalogo_completo": "/api/catalogo-completo/{segmento}/{año}/{mes}",
+                    "catalogo_completo_activo": "/api/catalogo-completo/{segmento}/activo",
+                },
+                "admin": {
+                    "panel": "/api/admin",
+                    "validar_producto": "POST /api/validar-producto",
+                },
+                "utilidades": {
+                    "diagnostico": "/diagnostico",
+                },
             },
             "ejemplos": {
                 "catalogo_fnb_activo": "/api/catalogo/fnb/activo",
-                "catalogo_gaso_noviembre_2025": "/api/catalogo/gaso/2025/11-noviembre",
-                "celulares_gaso": "/api/catalogo/gaso/2025/11-noviembre/1-celulares",
-                "producto_especifico": "/api/catalogo/fnb/2025/11-noviembre/1-celulares/CELCEL0091",
-                "imagen_con_ruta": "/ver-ruta/catalogos/fnb/2025/11-noviembre/1-celulares/caracteristicas/01.png",
+                "catalogo_fnb_diciembre_2025": "/api/catalogo/fnb/2025/12-diciembre",
+                "catalogo_gaso_diciembre_2025": "/api/catalogo/gaso/2025/12-diciembre",
+                "celulares_fnb": "/api/catalogo/fnb/2025/12-diciembre/1-celulares",
+                "televisores_gaso": "/api/catalogo/gaso/2025/12-diciembre/2-televisores",
+                "pdf_catalogo_completo_fnb": "/api/catalogo-completo/fnb/2025/12-diciembre",
+                "pdf_catalogo_completo_gaso": "/api/catalogo-completo/gaso/2025/12-diciembre",
+                "listar_pdfs_fnb": "/api/pdfs/fnb/2025/12-diciembre",
+                "listar_pdfs_gaso": "/api/pdfs/gaso/2025/12-diciembre",
+                "pdf_categoria_celulares": "/api/pdf/fnb/2025/12-diciembre/1-celulares",
+                "imagen_caracteristica": "/api/catalogos/fnb/2025/11-noviembre/1-celulares/caracteristicas/01.png",
             },
-        },
-    }
+        }
+    except Exception as e:
+        raise HTTPException(
+            status_code=500, detail=f"Error al cargar información: {str(e)}"
+        )
 
 
 @app.get("/api/segmentos")
@@ -393,7 +428,7 @@ async def obtener_pdf_categoria(segmento: str, anio: str, mes: str, categoria: s
 
 @app.get("/api/pdfs/{segmento}/{anio}/{mes}")
 async def listar_pdfs_mes(segmento: str, anio: str, mes: str):
-    """Lista todos los PDFs disponibles en un mes"""
+    """Lista todos los PDFs disponibles en un mes, incluyendo el catálogo completo"""
     try:
         pdfs = catalogo_mgr.listar_pdfs_mes(anio, mes, segmento)
 
@@ -402,11 +437,34 @@ async def listar_pdfs_mes(segmento: str, anio: str, mes: str):
                 status_code=404, detail=f"No hay PDFs disponibles para {mes}/{anio}"
             )
 
+        # Agregar URLs completas para acceder a cada PDF
+        pdfs_con_urls = {}
+        for categoria, ruta in pdfs.items():
+            if ruta:
+                pdfs_con_urls[categoria] = {
+                    "ruta": ruta,
+                    "url": f"{SERVER_URL}/api/ver-pdf/{ruta}",
+                }
+            else:
+                pdfs_con_urls[categoria] = None
+
+        # Verificar si existe catálogo completo en la raíz del mes
+        catalogo_completo = catalogo_mgr.obtener_pdf_catalogo_completo(
+            anio, mes, segmento
+        )
+        catalogo_completo_info = None
+        if catalogo_completo and catalogo_completo.exists():
+            catalogo_completo_info = {
+                "nombre": catalogo_completo.name,
+                "url": f"{SERVER_URL}/api/catalogo-completo/{segmento}/{anio}/{mes}",
+            }
+
         return {
             "segmento": segmento,
             "año": anio,
             "mes": mes,
-            "pdfs_disponibles": pdfs,
+            "catalogo_completo": catalogo_completo_info,
+            "pdfs_por_categoria": pdfs_con_urls,
             "total_pdfs": sum(1 for v in pdfs.values() if v is not None),
         }
 
@@ -414,6 +472,30 @@ async def listar_pdfs_mes(segmento: str, anio: str, mes: str):
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error al listar PDFs: {str(e)}")
+
+
+@app.get("/api/ver-pdf/{ruta:path}")
+async def ver_pdf(ruta: str):
+    """Sirve un PDF desde la ruta relativa (dentro de imagenes/catalogos/)"""
+    try:
+        # Decodificar la URL para manejar caracteres especiales (espacios, tildes, etc.)
+        ruta_decodificada = urllib.parse.unquote(ruta)
+        ruta_pdf = Path(IMAGENES_DIR) / "catalogos" / ruta_decodificada
+
+        if not ruta_pdf.exists():
+            raise HTTPException(
+                status_code=404, detail=f"PDF no encontrado: {ruta_decodificada}"
+            )
+
+        if not ruta_pdf.is_file() or not ruta_pdf.suffix.lower() == ".pdf":
+            raise HTTPException(status_code=400, detail="Ruta inválida o no es un PDF")
+
+        return InlinePDFResponse(ruta_pdf, media_type="application/pdf")
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error al servir PDF: {str(e)}")
 
 
 @app.get("/api/pdf/{segmento}/activo/{categoria}")
@@ -464,6 +546,53 @@ async def listar_pdfs_mes_activo(segmento: str):
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error al listar PDFs: {str(e)}")
+
+
+@app.get("/api/catalogo-completo/{segmento}/{anio}/{mes}")
+async def obtener_catalogo_completo(segmento: str, anio: str, mes: str):
+    """Obtiene el PDF del catálogo completo de un mes específico"""
+    try:
+        ruta_pdf = catalogo_mgr.obtener_pdf_catalogo_completo(anio, mes, segmento)
+
+        if not ruta_pdf or not ruta_pdf.exists():
+            raise HTTPException(
+                status_code=404,
+                detail=f"No se encontró el catálogo completo para {segmento}/{anio}/{mes}",
+            )
+
+        return InlinePDFResponse(ruta_pdf, media_type="application/pdf")
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=500, detail=f"Error al obtener catálogo completo: {str(e)}"
+        )
+
+
+@app.get("/api/catalogo-completo/{segmento}/activo")
+async def obtener_catalogo_completo_activo(segmento: str):
+    """Obtiene el PDF del catálogo completo del mes activo"""
+    try:
+        catalogo_info = catalogo_mgr.detectar_catalogo_actual(segmento)
+        ruta_pdf = catalogo_mgr.obtener_pdf_catalogo_completo(
+            catalogo_info["año"], catalogo_info["mes"], segmento
+        )
+
+        if not ruta_pdf or not ruta_pdf.exists():
+            raise HTTPException(
+                status_code=404,
+                detail=f"No se encontró el catálogo completo activo para {segmento}",
+            )
+
+        return InlinePDFResponse(ruta_pdf, media_type="application/pdf")
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=500, detail=f"Error al obtener catálogo completo: {str(e)}"
+        )
 
 
 @app.get("/ver/{nombre_archivo}")

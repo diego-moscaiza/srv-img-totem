@@ -10,6 +10,7 @@ class ProductoBase(BaseModel):
     categoria: str
     imagen_listado: str
     imagen_caracteristicas: str
+    imagen_caracteristicas_2: Optional[str] = None
     cuotas: Dict[str, float]
     mes: str
     ano: int
@@ -30,6 +31,7 @@ class ProductoUpdate(BaseModel):
     categoria: Optional[str] = None
     imagen_listado: Optional[str] = None
     imagen_caracteristicas: Optional[str] = None
+    imagen_caracteristicas_2: Optional[str] = None
     cuotas: Optional[Dict[str, float]] = None
     mes: Optional[str] = None
     ano: Optional[int] = None
