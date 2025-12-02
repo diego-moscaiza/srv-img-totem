@@ -1,9 +1,35 @@
 from sqlalchemy import create_engine, Column, Integer, String, Float, Boolean, JSON
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
+import os
+from pathlib import Path
+from dotenv import load_dotenv
 
-# Crear la conexión a SQLite (sin necesidad de PostgreSQL)
-DATABASE_URL = "sqlite:///./catalogos.db"
+# Cargar variables de entorno desde .env
+load_dotenv()
+
+
+# Determinar la ruta de la base de datos según el entorno
+def get_database_url():
+    """Obtiene la URL de la base de datos, compatible con Windows y Linux"""
+
+    # Si hay una variable de entorno definida, usarla
+    env_url = os.getenv("DATABASE_URL")
+    if env_url:
+        return env_url
+
+    # Ruta por defecto relativa al directorio del proyecto
+    # Funciona tanto en Windows como en Linux
+    base_dir = Path(__file__).parent.parent  # srv-img-totem/
+    db_path = base_dir / "catalogos.db"
+
+    # SQLite usa formato diferente según el SO
+    # Windows: sqlite:///C:/path/to/db.db
+    # Linux: sqlite:////srv/data/db.db o sqlite:///./db.db
+    return f"sqlite:///{db_path}"
+
+
+DATABASE_URL = get_database_url()
 
 engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)

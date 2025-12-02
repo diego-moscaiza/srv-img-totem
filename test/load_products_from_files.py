@@ -205,9 +205,17 @@ def cargar_productos():
             cat_dir = mes_dir / cat_carpeta
             precios_dir = cat_dir / "precios"
 
-            imagenes_precios = (
-                sorted(precios_dir.glob("*.png")) if precios_dir.exists() else []
-            )
+            imagenes_precios = []
+            if precios_dir.exists():
+                imagenes_precios = sorted(
+                    list(precios_dir.glob("*.png")) + 
+                    list(precios_dir.glob("*.jpg")) + 
+                    list(precios_dir.glob("*.jpeg")) + 
+                    list(precios_dir.glob("*.JPG")) + 
+                    list(precios_dir.glob("*.JPEG")) +
+                    list(precios_dir.glob("*.gif")) +
+                    list(precios_dir.glob("*.webp"))
+                )
 
             for idx, img_precio in enumerate(imagenes_precios, 1):
                 codigo = f"{segmento.upper()}-{ano}-{mes_nombre[:2]}-{cat_carpeta[:1]}-{idx:03d}"
