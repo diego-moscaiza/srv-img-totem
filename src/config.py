@@ -7,7 +7,8 @@ load_dotenv()
 # Configuración del servidor
 SERVER_URL = os.getenv("SERVER_URL", "http://localhost:8000")
 IMAGENES_DIR = os.getenv("IMAGENES_DIR", "imagenes")
-DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./catalogos.db")
+# BD en volumen persistente (/srv/data) o fallback a carpeta local
+DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:////srv/data/catalogos.db")
 
 # Información de configuración
 CONFIG_INFO = {
