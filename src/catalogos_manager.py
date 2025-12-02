@@ -51,7 +51,9 @@ class SegmentoCatalogo:
 
             # Extraer el nombre del mes si viene en formato "12-diciembre"
             if "-" in mes:
-                mes_nombre = mes.split("-", 1)[1]  # Obtiene "diciembre" de "12-diciembre"
+                mes_nombre = mes.split("-", 1)[
+                    1
+                ]  # Obtiene "diciembre" de "12-diciembre"
             else:
                 mes_nombre = meses_map.get(mes, mes)
 
@@ -176,16 +178,16 @@ class SegmentoCatalogo:
         self, año: str, mes: str, categoria: str
     ) -> Optional[Path]:
         """Obtiene la ruta del PDF de una categoría
-        Busca recursivamente en la carpeta de la categoría
+        Busca en la raíz de la carpeta de la categoría
         """
-        categoria_upper = categoria.upper()
+        categoria_lower = categoria.lower()
 
         nombre_carpeta = None
         for carpeta_key, cat_nombre in self.categoria_map.items():
             if (
-                cat_nombre == categoria_upper
+                cat_nombre == categoria_lower
                 or carpeta_key == categoria
-                or carpeta_key.upper() == categoria_upper
+                or carpeta_key.lower() == categoria_lower
             ):
                 nombre_carpeta = carpeta_key
                 break
@@ -193,25 +195,52 @@ class SegmentoCatalogo:
         if not nombre_carpeta:
             return None
 
-        ruta_categoria = self.imagenes_base / self.nombre / año / mes / nombre_carpeta
+        # Buscar la carpeta del mes con formato XX-mes
+        ruta_año = self.imagenes_base / self.nombre / año
+        if not ruta_año.exists():
+            return None
+
+        # Buscar carpeta que contenga el nombre del mes
+        mes_limpio = mes.split("-")[-1] if "-" in mes else mes
+        carpeta_mes = None
+        for carpeta in ruta_año.iterdir():
+            if carpeta.is_dir() and mes_limpio in carpeta.name.lower():
+                carpeta_mes = carpeta.name
+                break
+
+        if not carpeta_mes:
+            return None
+
+        ruta_categoria = ruta_año / carpeta_mes / nombre_carpeta
 
         if not ruta_categoria.exists():
             return None
 
-        # Buscar PDFs recursivamente en la carpeta
-        pdfs = list(ruta_categoria.rglob("*.pdf"))
+        # Buscar PDFs en la raíz de la carpeta de categoría (no en subcarpetas)
+        pdfs = list(ruta_categoria.glob("*.pdf"))
         return pdfs[0] if pdfs else None
+
+    def _buscar_carpeta_mes(self, año: str, mes: str) -> Optional[Path]:
+        """Busca la carpeta del mes con formato XX-mes"""
+        ruta_año = self.imagenes_base / self.nombre / año
+        if not ruta_año.exists():
+            return None
+
+        mes_limpio = mes.split("-")[-1] if "-" in mes else mes
+        for carpeta in ruta_año.iterdir():
+            if carpeta.is_dir() and mes_limpio in carpeta.name.lower():
+                return carpeta
+        return None
 
     def listar_pdfs_mes(self, año: str, mes: str) -> Dict[str, Optional[str]]:
         """Lista PDFs disponibles en un mes para este segmento
-        Busca PDFs dentro de las carpetas de cada categoría
+        Busca PDFs en la raíz de cada carpeta de categoría
         Ej: fnb/2025/12-diciembre/1-celulares/*.pdf
         """
         pdfs_disponibles = {}
 
-        ruta_mes = self.imagenes_base / self.nombre / año / mes
-
-        if not ruta_mes.exists():
+        ruta_mes = self._buscar_carpeta_mes(año, mes)
+        if not ruta_mes:
             return pdfs_disponibles
 
         # Buscar PDFs en cada carpeta de categoría
@@ -219,10 +248,9 @@ class SegmentoCatalogo:
             ruta_categoria = ruta_mes / nombre_carpeta
 
             if ruta_categoria.exists():
-                # Buscar PDFs recursivamente en la carpeta de categoría
-                pdfs = list(ruta_categoria.rglob("*.pdf"))
+                # Buscar PDFs en la raíz de la carpeta (no subcarpetas)
+                pdfs = list(ruta_categoria.glob("*.pdf"))
                 if pdfs:
-                    # Tomar el primer PDF encontrado
                     ruta_relativa = pdfs[0].relative_to(self.imagenes_base)
                     pdfs_disponibles[categoria_nombre] = str(ruta_relativa).replace(
                         "\\", "/"
@@ -236,9 +264,8 @@ class SegmentoCatalogo:
 
     def obtener_pdf_catalogo_completo(self, año: str, mes: str) -> Optional[Path]:
         """Obtiene la ruta del PDF del catálogo completo del mes (ubicado en la raíz del mes)"""
-        ruta_mes = self.imagenes_base / self.nombre / año / mes
-
-        if not ruta_mes.exists():
+        ruta_mes = self._buscar_carpeta_mes(año, mes)
+        if not ruta_mes:
             return None
 
         # Buscar PDFs en la raíz de la carpeta del mes
@@ -262,9 +289,13 @@ class CatalogoManager:
         self.categoria_map = {
             "1-celulares": "celulares",
             "2-laptops": "laptops",
+            "2-televisores": "2-televisores",
             "3-televisores": "televisores",
+            "3-refrigeradores": "refrigeradores",
             "4-refrigeradoras": "refrigeradoras",
+            "4-lavadoras": "4-lavadoras",
             "5-lavadoras": "lavadoras",
+            "5-fusion": "fusion",
         }
 
         # Crear instancias de cada segmento
