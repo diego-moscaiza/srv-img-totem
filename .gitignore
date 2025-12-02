@@ -21,3 +21,6 @@ __pycache__
 venv/
 env/
 *.egg-info/
+
+# Imágenes y catálogos
+imagenes/
