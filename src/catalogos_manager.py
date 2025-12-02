@@ -49,7 +49,11 @@ class SegmentoCatalogo:
                 "12": "diciembre",
             }
 
-            mes_nombre = meses_map.get(mes, mes)
+            # Extraer el nombre del mes si viene en formato "12-diciembre"
+            if "-" in mes:
+                mes_nombre = mes.split("-", 1)[1]  # Obtiene "diciembre" de "12-diciembre"
+            else:
+                mes_nombre = meses_map.get(mes, mes)
 
             # Consultar productos del mes y año
             productos = (
