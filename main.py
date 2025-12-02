@@ -458,6 +458,12 @@ async def listar_pdfs_mes(segmento: str, anio: str, mes: str):
                 "nombre": catalogo_completo.name,
                 "url": f"{SERVER_URL}/api/catalogo-completo/{segmento}/{anio}/{mes}",
             }
+        else:
+            catalogo_completo_info = {
+                "nombre": None,
+                "url": None,
+                "mensaje": f"No se encontró catálogo completo para {segmento}/{anio}/{mes}",
+            }
 
         return {
             "segmento": segmento,
