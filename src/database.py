@@ -1,9 +1,11 @@
 from sqlalchemy import create_engine, Column, Integer, String, Float, Boolean, JSON
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
+import os
 
 # Crear la conexión a SQLite (sin necesidad de PostgreSQL)
-DATABASE_URL = "sqlite:///./catalogos.db"
+# Usar variable de entorno si está definida, sino usar la ruta por defecto
+DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:////srv/data/catalogos.db")
 
 engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
