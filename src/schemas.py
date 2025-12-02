@@ -11,7 +11,7 @@ class ProductoBase(BaseModel):
     imagen_listado: str
     imagen_caracteristicas: str
     imagen_caracteristicas_2: Optional[str] = None
-    cuotas: Dict[str, float]
+    cuotas: Optional[Dict[str, float]] = None
     mes: str
     ano: int
     segmento: str = "fnb"
