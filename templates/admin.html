@@ -658,6 +658,12 @@
                                     <option value="">Seleccionar...</option>
                                 </select>
                             </div>
+                            <div class="form-group">
+                                <label>Imagen Características 2 (Opcional)</label>
+                                <select name="imagen_caracteristicas_2">
+                                    <option value="">Seleccionar...</option>
+                                </select>
+                            </div>
                         </div>
                         
                         <!-- Sección: Cuotas -->
@@ -873,6 +879,7 @@
             
             const selectListado = crearForm.querySelector('select[name="imagen_listado"]');
             const selectCaracteristicas = crearForm.querySelector('select[name="imagen_caracteristicas"]');
+            const selectCaracteristicas2 = crearForm.querySelector('select[name="imagen_caracteristicas_2"]');
             const selectCategoria = crearForm.querySelector('select[name="categoria"]');
             
             // Obtener la categoría seleccionada (puede ser vacío)
@@ -951,6 +958,40 @@
                 selectCaracteristicas.innerHTML = options;
             } else {
                 console.warn('⚠️ [CREAR] selectCaracteristicas no encontrado o imagenesDisponibles.caracteristicas vacío');
+            }
+
+            if (selectCaracteristicas2 && imagenesDisponibles.caracteristicas) {
+                let options = '<option value="">Seleccionar...</option>';
+                let imagenesEncontradas = 0;
+                
+                // Debug: mostrar todas las claves
+                const todasLasClaves = Object.entries(imagenesDisponibles.caracteristicas);
+                console.log('   📋 Claves de características 2:', todasLasClaves.map(([k, v]) => `${k} (${v.length} imgs)`));
+                
+                for (const [key, imagenes] of todasLasClaves) {
+                    // Si hay categoría seleccionada, filtrar por ella
+                    if (categoriaSeleccionada) {
+                        const partes = key.split('/');
+                        const categoriaCarpeta = partes[partes.length - 1];
+                        const categoriaClave = categoriaCarpeta.split('-').slice(1).join('-').toLowerCase();
+                        
+                        // Solo incluir si coincide la categoría
+                        if (categoriaClave !== categoriaSeleccionada) {
+                            continue;
+                        }
+                    }
+                    
+                    // Mostrar todas las imágenes de este directorio
+                    imagenes.forEach(img => {
+                        options += `<option value="${img.url}">${key} - ${img.nombre}</option>`;
+                        imagenesEncontradas++;
+                    });
+                }
+                
+                console.log(`✅ [CREAR] Imágenes de características 2 encontradas: ${imagenesEncontradas}`);
+                selectCaracteristicas2.innerHTML = options;
+            } else {
+                console.warn('⚠️ [CREAR] selectCaracteristicas2 no encontrado o imagenesDisponibles.caracteristicas vacío');
             }
         }
 
@@ -1119,6 +1160,7 @@
                     categoria: formData.get('categoria'),
                     imagen_listado: formData.get('imagen_listado'),
                     imagen_caracteristicas: formData.get('imagen_caracteristicas'),
+                    imagen_caracteristicas_2: formData.get('imagen_caracteristicas_2'),
                     cuotas: cuotas,
                     mes: formData.get('mes'),
                     ano: parseInt(formData.get('ano')),
@@ -1373,6 +1415,15 @@
             } else {
                 html += `<div class="slide" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; opacity: 0; transition: opacity 0.3s ease; background: #f9fafd; color: #999; font-size: 0.9em;">Sin imagen</div>`;
             }
+
+            // Imagen Características 2
+            if (producto.imagen_caracteristicas_2 && producto.imagen_caracteristicas_2.trim() !== '') {
+                html += `<div class="slide" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; opacity: 0; transition: opacity 0.3s ease;">
+                            <img src="${producto.imagen_caracteristicas_2}" style="width: 100%; height: 100%; object-fit: contain; display: block;">
+                        </div>`;
+            } else {
+                html += `<div class="slide" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; opacity: 0; transition: opacity 0.3s ease; background: #f9fafd; color: #999; font-size: 0.9em;">Sin imagen</div>`;
+            }
             
             html += '</div>';
             
@@ -1384,13 +1435,15 @@
             html += '<div style="position: absolute; bottom: 12px; left: 50%; transform: translateX(-50%); display: flex; gap: 6px; z-index: 10;">';
             html += '<div class="slide-indicator active" style="width: 8px; height: 8px; border-radius: 50%; background: #2d5be3; cursor: pointer; transition: all 0.3s ease;"></div>';
             html += '<div class="slide-indicator" style="width: 8px; height: 8px; border-radius: 50%; background: rgba(45, 91, 227, 0.4); cursor: pointer; transition: all 0.3s ease;"></div>';
+            html += '<div class="slide-indicator" style="width: 8px; height: 8px; border-radius: 50%; background: rgba(45, 91, 227, 0.4); cursor: pointer; transition: all 0.3s ease;"></div>';
             html += '</div>';
             html += '</div>';
             
             // Info de imágenes
             html += '<div style="display: flex; gap: 8px; flex-wrap: wrap;">';
             html += '<span style="padding: 4px 10px; background: #e6eaff; color: #2d5be3; border-radius: 16px; font-size: 0.85em; font-weight: 600;">📸 Listado</span>';
-            html += '<span style="padding: 4px 10px; background: #e6eaff; color: #2d5be3; border-radius: 16px; font-size: 0.85em; font-weight: 600;">📸 Detalles</span>';
+            html += '<span style="padding: 4px 10px; background: #e6eaff; color: #2d5be3; border-radius: 16px; font-size: 0.85em; font-weight: 600;">📸 Características</span>';
+            html += '<span style="padding: 4px 10px; background: #e6eaff; color: #2d5be3; border-radius: 16px; font-size: 0.85em; font-weight: 600;">📸 Características 2</span>';
             html += '</div>';
             html += '</div>';
             
@@ -1448,8 +1501,9 @@
             // Sección: Imágenes
             html += '<div class="form-section">';
             html += '<h4>🖼️ Imágenes</h4>';
-            html += '<div class="form-group"><label style="margin-bottom: 6px;">Imagen Listado</label><select name="imagen_listado"><option value="' + producto.imagen_listado + '">' + producto.imagen_listado + '</option></select></div>';
-            html += '<div class="form-group"><label style="margin-bottom: 6px;">Imagen Características</label><select name="imagen_caracteristicas"><option value="' + producto.imagen_caracteristicas + '">' + producto.imagen_caracteristicas + '</option></select></div>';
+            html += '<div class="form-group"><label style="margin-bottom: 6px;">Imagen Listado</label><select name="imagen_listado"><option value="' + (producto.imagen_listado || '') + '">' + (producto.imagen_listado || 'Seleccionar...') + '</option></select></div>';
+            html += '<div class="form-group"><label style="margin-bottom: 6px;">Imagen Características</label><select name="imagen_caracteristicas"><option value="' + (producto.imagen_caracteristicas || '') + '">' + (producto.imagen_caracteristicas || 'Seleccionar...') + '</option></select></div>';
+            html += '<div class="form-group"><label style="margin-bottom: 6px;">Imagen Características 2</label><select name="imagen_caracteristicas_2"><option value="' + (producto.imagen_caracteristicas_2 || '') + '">' + (producto.imagen_caracteristicas_2 || 'Seleccionar...') + '</option></select></div>';
             html += '</div>';
             
             // Sección: Cuotas
@@ -1575,6 +1629,7 @@
             // Event listeners para actualizar carrusel en tiempo real
             const selectListado = modal.querySelector('select[name="imagen_listado"]');
             const selectCaracteristicas = modal.querySelector('select[name="imagen_caracteristicas"]');
+            const selectCaracteristicas2 = modal.querySelector('select[name="imagen_caracteristicas_2"]');
             const slides = modal.querySelectorAll('.slide');
             
             if (selectListado && slides.length > 0) {
@@ -1589,6 +1644,15 @@
             if (selectCaracteristicas && slides.length > 1) {
                 selectCaracteristicas.addEventListener('change', (e) => {
                     const imgSlide = slides[1].querySelector('img');
+                    if (imgSlide) {
+                        imgSlide.src = e.target.value;
+                    }
+                });
+            }
+
+            if (selectCaracteristicas2 && slides.length > 2) {
+                selectCaracteristicas2.addEventListener('change', (e) => {
+                    const imgSlide = slides[2].querySelector('img');
                     if (imgSlide) {
                         imgSlide.src = e.target.value;
                     }
@@ -1615,6 +1679,7 @@
         function actualizarSelectImagenesEnModal(modal) {
             const selectListado = modal.querySelector('select[name="imagen_listado"]');
             const selectCaracteristicas = modal.querySelector('select[name="imagen_caracteristicas"]');
+            const selectCaracteristicas2 = modal.querySelector('select[name="imagen_caracteristicas_2"]');
             const selectCategoria = modal.querySelector('select[name="categoria"]');
             
             // Obtener la categoría seleccionada (puede ser vacío)
@@ -1682,6 +1747,39 @@
                 console.log(`✅ Modal - Imágenes de características encontradas: ${imagenesEncontradas}`);
                 selectCaracteristicas.innerHTML = options;
             }
+
+            if (selectCaracteristicas2 && imagenesDisponibles.caracteristicas) {
+                let options = '<option value="">Sin imagen (Vacío)</option>';
+                
+                // Agregar opción actual si existe
+                if (productoEnEdicion.imagen_caracteristicas_2 && productoEnEdicion.imagen_caracteristicas_2.trim() !== '') {
+                    options = '<option value="' + productoEnEdicion.imagen_caracteristicas_2 + '">' + productoEnEdicion.imagen_caracteristicas_2 + '</option>' + options;
+                }
+                
+                let imagenesEncontradas = 0;
+                
+                for (const [key, imagenes] of Object.entries(imagenesDisponibles.caracteristicas)) {
+                    // Si hay categoría seleccionada, filtrar por ella
+                    if (categoriaSeleccionada) {
+                        const partes = key.split('/');
+                        const categoriaCarpeta = partes[partes.length - 1];
+                        const categoriaClave = categoriaCarpeta.split('-').slice(1).join('-').toLowerCase();
+                        
+                        // Solo incluir si coincide la categoría
+                        if (categoriaClave !== categoriaSeleccionada) {
+                            continue;
+                        }
+                    }
+                    
+                    imagenes.forEach(img => {
+                        options += `<option value="${img.url}">${key} - ${img.nombre}</option>`;
+                        imagenesEncontradas++;
+                    });
+                }
+                
+                console.log(`✅ Modal - Imágenes de características 2 encontradas: ${imagenesEncontradas}`);
+                selectCaracteristicas2.innerHTML = options;
+            }
         }
         
         async function cargarVistaDetalle(modal, producto) {
@@ -1708,6 +1806,15 @@
             } else {
                 html += `<div class="slide" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; opacity: 0; transition: opacity 0.3s ease; background: #f9fafd; color: #999; font-size: 1em;">Sin imagen de características</div>`;
             }
+
+            // Imagen Características 2
+            if (producto.imagen_caracteristicas_2 && producto.imagen_caracteristicas_2.trim() !== '') {
+                html += `<div class="slide" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; opacity: 0; transition: opacity 0.3s ease;">
+                            <img src="${producto.imagen_caracteristicas_2}" style="width: 100%; height: 100%; object-fit: contain; display: block;">
+                        </div>`;
+            } else {
+                html += `<div class="slide" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; opacity: 0; transition: opacity 0.3s ease; background: #f9fafd; color: #999; font-size: 1em;">Sin imagen de características 2</div>`;
+            }
             
             html += '</div>';
             
@@ -1719,6 +1826,7 @@
             html += '<div style="position: absolute; bottom: 15px; left: 50%; transform: translateX(-50%); display: flex; gap: 8px; z-index: 10;">';
             html += '<div class="slide-indicator active" style="width: 10px; height: 10px; border-radius: 50%; background: #2d5be3; cursor: pointer; transition: all 0.3s ease;"></div>';
             html += '<div class="slide-indicator" style="width: 10px; height: 10px; border-radius: 50%; background: rgba(45, 91, 227, 0.4); cursor: pointer; transition: all 0.3s ease;"></div>';
+            html += '<div class="slide-indicator" style="width: 10px; height: 10px; border-radius: 50%; background: rgba(45, 91, 227, 0.4); cursor: pointer; transition: all 0.3s ease;"></div>';
             html += '</div>';
             
             html += '</div>';
@@ -1728,6 +1836,7 @@
             html += '<div style="display: flex; gap: 15px; justify-content: center;">';
             html += '<span style="padding: 6px 12px; background: #e6eaff; color: #2d5be3; border-radius: 20px; font-size: 0.9em; font-weight: 600;">📸 Imagen Listado</span>';
             html += '<span style="padding: 6px 12px; background: #e6eaff; color: #2d5be3; border-radius: 20px; font-size: 0.9em; font-weight: 600;">📸 Imagen Características</span>';
+            html += '<span style="padding: 6px 12px; background: #e6eaff; color: #2d5be3; border-radius: 20px; font-size: 0.9em; font-weight: 600;">📸 Imagen Características 2</span>';
             html += '</div>';
             html += '</div>';
             
@@ -1836,16 +1945,16 @@
         
         async function cargarVistaEdicion(modal, producto) {
             let formHtml = '';
-            const campos = ['codigo', 'nombre', 'descripcion', 'precio', 'categoria', 'segmento', 'estado', 'mes', 'ano', 'imagen_listado', 'imagen_caracteristicas'];
+            const campos = ['codigo', 'nombre', 'descripcion', 'precio', 'categoria', 'segmento', 'estado', 'mes', 'ano', 'imagen_listado', 'imagen_caracteristicas', 'imagen_caracteristicas_2'];
             
             formHtml = '<div class="grid">';
             campos.forEach((key) => {
                 const value = producto[key];
-                const gridSpan = (key === 'descripcion' || key === 'imagen_listado' || key === 'imagen_caracteristicas') ? ' style="grid-column: 1/-1;"' : '';
+                const gridSpan = (key === 'descripcion' || key === 'imagen_listado' || key === 'imagen_caracteristicas' || key === 'imagen_caracteristicas_2') ? ' style="grid-column: 1/-1;"' : '';
                 
-                if (key === 'descripcion' || key === 'imagen_listado' || key === 'imagen_caracteristicas') {
+                if (key === 'descripcion' || key === 'imagen_listado' || key === 'imagen_caracteristicas' || key === 'imagen_caracteristicas_2') {
                     if (key === 'imagen_listado') {
-                        let optionsListado = '<option value="' + value + '">' + value + '</option>';
+                        let optionsListado = '<option value="' + (value || '') + '">' + (value || 'Seleccionar...') + '</option>';
                         for (const [loc, imagenes] of Object.entries(imagenesDisponibles.listado)) {
                             imagenes.forEach(img => {
                                 optionsListado += '<option value="' + img.url + '">' + loc + ' - ' + img.nombre + '</option>';
@@ -1853,13 +1962,21 @@
                         }
                         formHtml += '<div class="form-group"' + gridSpan + '><label>' + key + '</label><select name="' + key + '">' + optionsListado + '</select></div>';
                     } else if (key === 'imagen_caracteristicas') {
-                        let optionsCarac = '<option value="' + value + '">' + value + '</option>';
+                        let optionsCarac = '<option value="' + (value || '') + '">' + (value || 'Seleccionar...') + '</option>';
                         for (const [loc, imagenes] of Object.entries(imagenesDisponibles.caracteristicas)) {
                             imagenes.forEach(img => {
                                 optionsCarac += '<option value="' + img.url + '">' + loc + ' - ' + img.nombre + '</option>';
                             });
                         }
                         formHtml += '<div class="form-group"' + gridSpan + '><label>' + key + '</label><select name="' + key + '">' + optionsCarac + '</select></div>';
+                    } else if (key === 'imagen_caracteristicas_2') {
+                        let optionsCarac2 = '<option value="' + (value || '') + '">' + (value || 'Seleccionar...') + '</option>';
+                        for (const [loc, imagenes] of Object.entries(imagenesDisponibles.caracteristicas)) {
+                            imagenes.forEach(img => {
+                                optionsCarac2 += '<option value="' + img.url + '">' + loc + ' - ' + img.nombre + '</option>';
+                            });
+                        }
+                        formHtml += '<div class="form-group"' + gridSpan + '><label>' + key + '</label><select name="' + key + '">' + optionsCarac2 + '</select></div>';
                     } else {
                         formHtml += '<div class="form-group"' + gridSpan + '><label>' + key + '</label><textarea name="' + key + '">' + (value || '') + '</textarea></div>';
                     }
@@ -1951,6 +2068,7 @@
                 
                 // Recopilar datos manualmente del modal
                 const imagenCaracteristicas = modal.querySelector('select[name="imagen_caracteristicas"]')?.value;
+                const imagenCaracteristicas2 = modal.querySelector('select[name="imagen_caracteristicas_2"]')?.value;
                 
                 const data = {
                     codigo: modal.querySelector('input[name="codigo"]')?.value || productoEnEdicion.codigo,
@@ -1960,6 +2078,7 @@
                     categoria: modal.querySelector('select[name="categoria"]')?.value || productoEnEdicion.categoria,
                     imagen_listado: modal.querySelector('select[name="imagen_listado"]')?.value || productoEnEdicion.imagen_listado,
                     imagen_caracteristicas: imagenCaracteristicas === '' ? null : (imagenCaracteristicas || productoEnEdicion.imagen_caracteristicas),
+                    imagen_caracteristicas_2: imagenCaracteristicas2 === '' ? null : (imagenCaracteristicas2 || productoEnEdicion.imagen_caracteristicas_2),
                     cuotas: JSON.parse(modal.querySelector('textarea[name="cuotas"]')?.value || JSON.stringify(productoEnEdicion.cuotas)),
                     mes: modal.querySelector('select[name="mes"]')?.value || productoEnEdicion.mes,
                     ano: parseInt(modal.querySelector('select[name="ano"]')?.value) || productoEnEdicion.ano,
