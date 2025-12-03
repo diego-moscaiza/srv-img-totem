@@ -7,9 +7,11 @@ import os
 # Cargar .env si existe (para desarrollo local)
 try:
     from dotenv import load_dotenv
+
     load_dotenv()
 except ImportError:
     pass  # En Docker no necesita dotenv
+
 
 # Crear la conexión a SQLite
 # Detectar automáticamente el entorno: Docker vs Local
@@ -23,15 +25,16 @@ def get_database_url():
     env_url = os.getenv("DATABASE_URL")
     if env_url:
         return env_url
-    
+
     # Detectar si estamos en Docker (el directorio /srv existe)
     if Path("/srv/data").exists():
         return "sqlite:////srv/data/catalogos.db"
-    
+
     # Local: usar ruta relativa al proyecto
     project_root = Path(__file__).parent.parent
     db_path = project_root / "catalogos.db"
     return f"sqlite:///{db_path}"
+
 
 DATABASE_URL = get_database_url()
 
@@ -51,7 +54,7 @@ class Producto(Base):
     precio = Column(Float)
     categoria = Column(String(100))
     imagen_listado = Column(String(500))
-    imagen_caracteristicas = Column(String(500))
+    imagen_caracteristicas = Column(String(500), nullable=True, default=None)
     imagen_caracteristicas_2 = Column(String(500), nullable=True, default=None)
     cuotas = Column(JSON)  # {"3": 338.85, "6": 178.87, ...}
     mes = Column(String(20))
