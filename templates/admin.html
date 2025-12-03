@@ -253,18 +253,27 @@
             font-size: 12px;
         }
         /* Alertas */
+        #alertContainer {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            z-index: 9999;
+            max-width: 400px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
         .alert {
             padding: 15px 20px;
-            margin-bottom: 20px;
             border-radius: 8px;
-            display: none;
             border-left: 4px solid;
-            animation: slideDown 0.3s ease;
+            animation: slideInRight 0.3s ease;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            min-width: 300px;
         }
-        .alert.show { display: block; }
-        @keyframes slideDown {
-            from { opacity: 0; transform: translateY(-10px); }
-            to { opacity: 1; transform: translateY(0); }
+        @keyframes slideInRight {
+            from { opacity: 0; transform: translateX(20px); }
+            to { opacity: 1; transform: translateX(0); }
         }
         .alert-success {
             background: #eafaf1;
@@ -1853,7 +1862,7 @@
         function mostrarAlerta(mensaje, tipo) {
             const container = document.getElementById('alertContainer');
             const alert = document.createElement('div');
-            alert.className = 'alert alert-' + tipo + ' show';
+            alert.className = 'alert alert-' + tipo;
             alert.textContent = mensaje;
             container.appendChild(alert);
             setTimeout(() => alert.remove(), 4000);
