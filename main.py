@@ -129,6 +129,78 @@ async def obtener_segmentos():
         )
 
 
+@app.get("/api/catalogo/{segmento}/activo/{categoria}")
+async def obtener_categoria_activa(segmento: str, categoria: str):
+    """Obtiene productos de una categoría específica del catálogo activo"""
+    try:
+        catalogo_info = catalogo_mgr.detectar_catalogo_actual(segmento)
+        anio = catalogo_info["año"]
+        mes = catalogo_info["mes"]
+        catalogo = catalogo_mgr.cargar_catalogo_mes(anio, mes, segmento)
+
+        # Buscar la categoría
+        categoria_encontrada = None
+        categoria_carpeta = None
+        for cat_key, cat_nombre in catalogo_mgr.categoria_map.items():
+            if (
+                cat_nombre.lower() == categoria.lower()
+                or cat_key.lower() == categoria.lower()
+                or categoria.lower() in cat_key.lower()
+            ):
+                categoria_encontrada = cat_nombre
+                categoria_carpeta = cat_key
+                break
+
+        if not categoria_encontrada or categoria_encontrada not in catalogo:
+            raise HTTPException(
+                status_code=404, detail=f"Categoría '{categoria}' no encontrada"
+            )
+
+        productos = catalogo[categoria_encontrada]
+
+        # Obtener PDF de la categoría
+        pdf_info = None
+        ruta_pdf = catalogo_mgr.obtener_pdf_categoria(
+            anio, mes, categoria_carpeta or categoria, segmento
+        )
+
+        if ruta_pdf and ruta_pdf.exists():
+            ruta_relativa = ruta_pdf.relative_to(Path(IMAGENES_DIR) / "catalogos")
+            ruta_relativa_str = str(ruta_relativa).replace("\\", "/")
+            url_relativa_pdf = f"/api/ver-pdf/{ruta_relativa_str}"
+            url_base64_pdf = f"/api/pdf-base64/{ruta_relativa_str}"
+            pdf_info = {
+                "nombre": ruta_pdf.name,
+                "url": f"{SERVER_URL}{url_relativa_pdf}",
+                "url_relativa": url_relativa_pdf,
+                "url_base64": url_base64_pdf,
+                "tamaño_mb": round(ruta_pdf.stat().st_size / (1024 * 1024), 2),
+            }
+        else:
+            pdf_info = {
+                "nombre": None,
+                "url": None,
+                "url_relativa": None,
+                "url_base64": None,
+                "mensaje": f"No hay PDF disponible para {categoria_encontrada}",
+            }
+
+        return {
+            "segmento": segmento,
+            "catalogo_info": catalogo_info,
+            "categoria": categoria_encontrada,
+            "total_productos": len(productos),
+            "pdf": pdf_info,
+            "productos": productos,
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=500, detail=f"Error al obtener categoría activa: {str(e)}"
+        )
+
+
 @app.get("/api/catalogo/{segmento}/activo")
 async def obtener_catalogo_activo(segmento: str):
     """Obtiene el catálogo activo de un segmento con productos y PDFs"""
@@ -159,9 +231,13 @@ async def obtener_catalogo_activo(segmento: str):
                         Path(IMAGENES_DIR) / "catalogos"
                     )
                     ruta_relativa_str = str(ruta_relativa).replace("\\", "/")
+                    url_relativa_pdf = f"/api/ver-pdf/{ruta_relativa_str}"
+                    url_base64_pdf = f"/api/pdf-base64/{ruta_relativa_str}"
                     pdf_info = {
                         "nombre": ruta_pdf.name,
-                        "url": f"{SERVER_URL}/api/ver-pdf/{ruta_relativa_str}",
+                        "url": f"{SERVER_URL}{url_relativa_pdf}",
+                        "url_relativa": url_relativa_pdf,
+                        "url_base64": url_base64_pdf,
                         "tamaño_mb": round(ruta_pdf.stat().st_size / (1024 * 1024), 2),
                     }
 
@@ -177,9 +253,15 @@ async def obtener_catalogo_activo(segmento: str):
         )
         catalogo_completo_info = None
         if catalogo_completo_pdf and catalogo_completo_pdf.exists():
+            url_relativa_completo = f"/api/catalogo-completo/{segmento}/{anio}/{mes}"
+            # Para base64 del catálogo completo, usar la ruta del archivo
+            ruta_rel_completo = catalogo_completo_pdf.relative_to(Path(IMAGENES_DIR) / "catalogos")
+            url_base64_completo = f"/api/pdf-base64/{str(ruta_rel_completo).replace(chr(92), '/')}"
             catalogo_completo_info = {
                 "nombre": catalogo_completo_pdf.name,
-                "url": f"{SERVER_URL}/api/catalogo-completo/{segmento}/{anio}/{mes}",
+                "url": f"{SERVER_URL}{url_relativa_completo}",
+                "url_relativa": url_relativa_completo,
+                "url_base64": url_base64_completo,
                 "tamaño_mb": round(
                     catalogo_completo_pdf.stat().st_size / (1024 * 1024), 2
                 ),
@@ -226,9 +308,11 @@ async def obtener_catalogo_mes(segmento: str, anio: str, mes: str):
                         Path(IMAGENES_DIR) / "catalogos"
                     )
                     ruta_relativa_str = str(ruta_relativa).replace("\\", "/")
+                    url_relativa_pdf = f"/api/ver-pdf/{ruta_relativa_str}"
                     pdf_info = {
                         "nombre": ruta_pdf.name,
-                        "url": f"{SERVER_URL}/api/ver-pdf/{ruta_relativa_str}",
+                        "url": f"{SERVER_URL}{url_relativa_pdf}",
+                        "url_relativa": url_relativa_pdf,
                         "tamaño_mb": round(ruta_pdf.stat().st_size / (1024 * 1024), 2),
                     }
 
@@ -244,9 +328,11 @@ async def obtener_catalogo_mes(segmento: str, anio: str, mes: str):
         )
         catalogo_completo_info = None
         if catalogo_completo_pdf and catalogo_completo_pdf.exists():
+            url_relativa_completo = f"/api/catalogo-completo/{segmento}/{anio}/{mes}"
             catalogo_completo_info = {
                 "nombre": catalogo_completo_pdf.name,
-                "url": f"{SERVER_URL}/api/catalogo-completo/{segmento}/{anio}/{mes}",
+                "url": f"{SERVER_URL}{url_relativa_completo}",
+                "url_relativa": url_relativa_completo,
                 "tamaño_mb": round(
                     catalogo_completo_pdf.stat().st_size / (1024 * 1024), 2
                 ),
@@ -276,8 +362,8 @@ async def obtener_categorias_mes(segmento: str, anio: str, mes: str, categoria: 
         categoria_carpeta = None
         for cat_key, cat_nombre in catalogo_mgr.categoria_map.items():
             if (
-                cat_nombre.upper() == categoria.upper()
-                or cat_key.upper() == categoria.upper()
+                cat_nombre.lower() == categoria.lower()
+                or cat_key.lower() == categoria.lower()
             ):
                 categoria_encontrada = cat_nombre
                 categoria_carpeta = cat_key
@@ -300,15 +386,18 @@ async def obtener_categorias_mes(segmento: str, anio: str, mes: str, categoria: 
             # Construir ruta relativa para la URL
             ruta_relativa = ruta_pdf.relative_to(Path(IMAGENES_DIR) / "catalogos")
             ruta_relativa_str = str(ruta_relativa).replace("\\", "/")
+            url_relativa_pdf = f"/api/ver-pdf/{ruta_relativa_str}"
             pdf_info = {
                 "nombre": ruta_pdf.name,
-                "url": f"{SERVER_URL}/api/ver-pdf/{ruta_relativa_str}",
+                "url": f"{SERVER_URL}{url_relativa_pdf}",
+                "url_relativa": url_relativa_pdf,
                 "tamaño_mb": round(ruta_pdf.stat().st_size / (1024 * 1024), 2),
             }
         else:
             pdf_info = {
                 "nombre": None,
                 "url": None,
+                "url_relativa": None,
                 "mensaje": f"No hay PDF disponible para {categoria_encontrada}",
             }
 
@@ -502,6 +591,70 @@ async def obtener_meses_disponibles():
         raise HTTPException(
             status_code=500, detail=f"Error al obtener meses disponibles: {str(e)}"
         )
+
+
+@app.get("/api/pdf-base64/{ruta:path}")
+async def obtener_pdf_base64(ruta: str, force: bool = False):
+    """
+    Devuelve un PDF en formato base64 para uso en n8n/WhatsApp.
+    Por defecto solo permite archivos menores a 5MB.
+    Use ?force=true para forzar la conversión de archivos más grandes (máx 20MB).
+    """
+    import base64
+    
+    MAX_SIZE_DEFAULT = 5 * 1024 * 1024  # 5 MB
+    MAX_SIZE_FORCED = 20 * 1024 * 1024  # 20 MB
+    
+    try:
+        ruta_decodificada = urllib.parse.unquote(ruta)
+        ruta_pdf = Path(IMAGENES_DIR) / "catalogos" / ruta_decodificada
+
+        if not ruta_pdf.exists():
+            raise HTTPException(
+                status_code=404, detail=f"PDF no encontrado: {ruta_decodificada}"
+            )
+
+        if not ruta_pdf.is_file() or not ruta_pdf.suffix.lower() == ".pdf":
+            raise HTTPException(status_code=400, detail="Ruta inválida o no es un PDF")
+
+        tamaño_bytes = ruta_pdf.stat().st_size
+        tamaño_mb = round(tamaño_bytes / (1024 * 1024), 2)
+        
+        # Verificar límites de tamaño
+        max_size = MAX_SIZE_FORCED if force else MAX_SIZE_DEFAULT
+        if tamaño_bytes > max_size:
+            return {
+                "success": False,
+                "error": f"Archivo demasiado grande ({tamaño_mb} MB). Límite: {max_size // (1024*1024)} MB",
+                "archivo": {
+                    "nombre": ruta_pdf.name,
+                    "tamaño_bytes": tamaño_bytes,
+                    "tamaño_mb": tamaño_mb,
+                    "mime_type": "application/pdf",
+                },
+                "sugerencia": "Use ?force=true para forzar (máx 20MB) o descargue directamente desde url_relativa",
+                "url_descarga_directa": f"/api/ver-pdf/{ruta}",
+            }
+
+        # Leer y codificar en base64
+        with open(ruta_pdf, "rb") as f:
+            contenido_base64 = base64.b64encode(f.read()).decode("utf-8")
+
+        return {
+            "success": True,
+            "archivo": {
+                "nombre": ruta_pdf.name,
+                "tamaño_bytes": tamaño_bytes,
+                "tamaño_mb": tamaño_mb,
+                "mime_type": "application/pdf",
+            },
+            "base64": contenido_base64,
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error al obtener PDF: {str(e)}")
 
 
 @app.get("/api/ver-pdf/{ruta:path}")
