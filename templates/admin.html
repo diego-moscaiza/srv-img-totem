@@ -653,8 +653,8 @@
                                 </select>
                             </div>
                             <div class="form-group">
-                                <label>Imagen Características *</label>
-                                <select name="imagen_caracteristicas" required>
+                                <label>Imagen Características (Opcional)</label>
+                                <select name="imagen_caracteristicas">
                                     <option value="">Seleccionar...</option>
                                 </select>
                             </div>
@@ -768,6 +768,12 @@
         let productoEnEdicion = null;
         let productosGlobal = [];
         let imagenesDisponibles = { listado: {}, caracteristicas: {} };
+        
+        // Mapeo de categorías por segmento
+        const categoriasPorSegmento = {
+            'fnb': ['celulares', 'laptops', 'televisores', 'refrigeradoras', 'lavadoras'],
+            'gaso': ['celulares', 'televisores', 'refrigeradores', 'lavadoras', 'fusion']
+        };
 
         // Cargar imágenes disponibles con filtros - MEJORADO
         async function cargarImagenesDisponibles(segmento = null, ano = null, mes = null, categoria = null) {
@@ -812,6 +818,49 @@
 
         // NOTA: Los listeners se configuran en inicializarCarruselCrear para evitar duplicados
         // y garantizar sincronización correcta de actualizaciones
+
+        // Actualizar opciones de categoría según el segmento seleccionado
+        function actualizarCategoriasEnFormulario(formularioId) {
+            const formulario = document.getElementById(formularioId);
+            if (!formulario) {
+                console.error(`❌ No se encontró formulario: ${formularioId}`);
+                return;
+            }
+            
+            const selectSegmento = formulario.querySelector('select[name="segmento"]');
+            const selectCategoria = formulario.querySelector('select[name="categoria"]');
+            
+            if (!selectSegmento || !selectCategoria) {
+                console.error(`❌ No se encontraron los selects de segmento o categoría en ${formularioId}`);
+                return;
+            }
+            
+            const segmentoSeleccionado = selectSegmento.value.toLowerCase();
+            const categoriasDisponibles = categoriasPorSegmento[segmentoSeleccionado] || [];
+            
+            console.log(`📋 Actualizando categorías para segmento: ${segmentoSeleccionado}`, categoriasDisponibles);
+            
+            // Guardar la categoría actual si existe
+            const categoriaActual = selectCategoria.value;
+            
+            // Limpiar opciones excepto la primera
+            selectCategoria.innerHTML = '<option value="">Seleccionar...</option>';
+            
+            // Agregar categorías del segmento seleccionado
+            categoriasDisponibles.forEach(cat => {
+                const option = document.createElement('option');
+                option.value = cat;
+                option.textContent = cat.charAt(0).toUpperCase() + cat.slice(1);
+                selectCategoria.appendChild(option);
+            });
+            
+            // Restaurar la categoría anterior si existe en el segmento nuevo
+            if (categoriaActual && categoriasDisponibles.includes(categoriaActual)) {
+                selectCategoria.value = categoriaActual;
+            } else {
+                selectCategoria.value = '';
+            }
+        }
 
         // Actualizar select de imágenes - MEJORADO
         function actualizarSelectImagenes() {
@@ -990,7 +1039,14 @@
             };
             
             // Agregar listeners a filtros seg/año/mes
-            if (selectSegmento) selectSegmento.addEventListener('change', actualizarImagenesFiltro);
+            if (selectSegmento) {
+                selectSegmento.addEventListener('change', async () => {
+                    // Actualizar categorías cuando cambia el segmento
+                    actualizarCategoriasEnFormulario('crearForm');
+                    // Luego cargar imágenes
+                    await actualizarImagenesFiltro();
+                });
+            }
             if (selectAno) selectAno.addEventListener('change', actualizarImagenesFiltro);
             if (selectMes) selectMes.addEventListener('change', actualizarImagenesFiltro);
             
@@ -1102,9 +1158,54 @@
                 const productos = await response.json();
                 productosGlobal = productos;
                 mostrarProductos(productos);
+                
+                // Agregar listener para cambios de segmento en el filtro
+                const filtroSegmento = document.getElementById('filtroSegmento');
+                if (filtroSegmento) {
+                    filtroSegmento.addEventListener('change', () => {
+                        actualizarCategoriasFiltro();
+                        aplicarFiltros();
+                    });
+                }
             } catch(e) {
                 console.error('Error en cargarProductos:', e);
                 mostrarAlerta('❌ Error: ' + e.message, 'error');
+            }
+        }
+
+        function actualizarCategoriasFiltro() {
+            const filtroSegmento = document.getElementById('filtroSegmento');
+            const filtroCategoria = document.getElementById('filtroCategoria');
+            
+            if (!filtroSegmento || !filtroCategoria) {
+                console.error('❌ No se encontraron los selects de filtro segmento o categoría');
+                return;
+            }
+            
+            const segmentoSeleccionado = filtroSegmento.value.toLowerCase();
+            const categoriasDisponibles = categoriasPorSegmento[segmentoSeleccionado] || [];
+            
+            console.log(`📋 Actualizando categorías del filtro para segmento: ${segmentoSeleccionado}`, categoriasDisponibles);
+            
+            // Guardar la categoría actual si existe
+            const categoriaActual = filtroCategoria.value;
+            
+            // Limpiar opciones excepto la primera
+            filtroCategoria.innerHTML = '<option value="">Todas</option>';
+            
+            // Agregar categorías del segmento seleccionado
+            categoriasDisponibles.forEach(cat => {
+                const option = document.createElement('option');
+                option.value = cat;
+                option.textContent = cat.charAt(0).toUpperCase() + cat.slice(1);
+                filtroCategoria.appendChild(option);
+            });
+            
+            // Restaurar la categoría anterior si existe en el segmento nuevo
+            if (categoriaActual && categoriasDisponibles.includes(categoriaActual)) {
+                filtroCategoria.value = categoriaActual;
+            } else {
+                filtroCategoria.value = '';
             }
         }
 
@@ -1311,7 +1412,18 @@
             html += '<h4>💰 Precio y Categoría</h4>';
             html += '<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">';
             html += '<div class="form-group"><label style="margin-bottom: 6px;">Precio</label><input type="number" name="precio" value="' + producto.precio + '" step="0.01"></div>';
-            html += '<div class="form-group"><label style="margin-bottom: 6px;">Categoría</label><select name="categoria"><option>' + producto.categoria + '</option><option>celulares</option><option>laptops</option><option>televisores</option><option>refrigeradoras</option><option>lavadoras</option></select></div>';
+            
+            // Generar dinámicamente las opciones de categoría según el segmento
+            const segmentoModal = producto.segmento.toLowerCase();
+            const categoriasModal = categoriasPorSegmento[segmentoModal] || [];
+            let opcionesCategorias = '<option value="' + producto.categoria + '">' + producto.categoria + '</option>';
+            categoriasModal.forEach(cat => {
+                if (cat !== producto.categoria) {
+                    opcionesCategorias += '<option value="' + cat + '">' + cat.charAt(0).toUpperCase() + cat.slice(1) + '</option>';
+                }
+            });
+            
+            html += '<div class="form-group"><label style="margin-bottom: 6px;">Categoría</label><select name="categoria">' + opcionesCategorias + '</select></div>';
             html += '</div>';
             html += '</div>';
             
@@ -1357,6 +1469,44 @@
             
             modal.querySelector('#contenido-modal').innerHTML = html;
             
+            // Actualizar dinámicamente las categorías según el segmento actual
+            const segmentoSelectModal = modal.querySelector('select[name="segmento"]');
+            const categoriaSelectModal = modal.querySelector('select[name="categoria"]');
+            
+            if (segmentoSelectModal && categoriaSelectModal) {
+                const segmentoActualModal = segmentoSelectModal.value.toLowerCase();
+                const categoriasDisponiblesModal = categoriasPorSegmento[segmentoActualModal] || [];
+                const categoriaActual = producto.categoria;
+                
+                // Reconstruir las opciones de categoría
+                let opcionesCategoria = '<option value="' + categoriaActual + '">' + categoriaActual + '</option>';
+                categoriasDisponiblesModal.forEach(cat => {
+                    if (cat !== categoriaActual) {
+                        opcionesCategoria += '<option value="' + cat + '">' + cat.charAt(0).toUpperCase() + cat.slice(1) + '</option>';
+                    }
+                });
+                categoriaSelectModal.innerHTML = opcionesCategoria;
+                categoriaSelectModal.value = categoriaActual;
+                
+                // Agregar listener para actualizar categorías cuando cambia el segmento en el modal
+                segmentoSelectModal.addEventListener('change', () => {
+                    const nuevoSegmento = segmentoSelectModal.value.toLowerCase();
+                    const nuevasCategorias = categoriasPorSegmento[nuevoSegmento] || [];
+                    const categoriaSeleccionada = categoriaSelectModal.value;
+                    
+                    // Regenerar opciones de categoría
+                    let nuevasOpciones = '<option value="">Seleccionar...</option>';
+                    nuevasCategorias.forEach(cat => {
+                        nuevasOpciones += '<option value="' + cat + '"' + (cat === categoriaSeleccionada ? ' selected' : '') + '>' + cat.charAt(0).toUpperCase() + cat.slice(1) + '</option>';
+                    });
+                    
+                    categoriaSelectModal.innerHTML = nuevasOpciones;
+                    if (!nuevasCategorias.includes(categoriaSeleccionada)) {
+                        categoriaSelectModal.value = '';
+                    }
+                });
+            }
+            
             // Cargar imágenes dinámicamente
             const segmento = modal.querySelector('select[name="segmento"]').value;
             const ano = modal.querySelector('select[name="ano"]').value;
@@ -1378,15 +1528,48 @@
             
             // Event listeners para filtros
             const filtros = modal.querySelectorAll('select[name="segmento"], select[name="ano"], select[name="mes"], select[name="categoria"]');
-            filtros.forEach(filtro => {
-                filtro.addEventListener('change', async () => {
+            
+            // Listener especial para cambios de segmento
+            const selectSegmentoModal = modal.querySelector('select[name="segmento"]');
+            if (selectSegmentoModal) {
+                selectSegmentoModal.addEventListener('change', async () => {
+                    // Actualizar dinámicamente las categorías
+                    const segmentoSeleccionadoModal = selectSegmentoModal.value.toLowerCase();
+                    const categoriasParaSegmento = categoriasPorSegmento[segmentoSeleccionadoModal] || [];
+                    const categoriaSelectModalActual = modal.querySelector('select[name="categoria"]');
+                    const categoriaActualModal = categoriaSelectModalActual.value;
+                    
+                    // Reconstruir opciones de categoría
+                    let opcionesCategoria = '<option value="' + categoriaActualModal + '">' + categoriaActualModal + '</option>';
+                    categoriasParaSegmento.forEach(cat => {
+                        if (cat !== categoriaActualModal) {
+                            opcionesCategoria += '<option value="' + cat + '">' + cat.charAt(0).toUpperCase() + cat.slice(1) + '</option>';
+                        }
+                    });
+                    categoriaSelectModalActual.innerHTML = opcionesCategoria;
+                    categoriaSelectModalActual.value = categoriaActualModal;
+                    
+                    // Luego actualizar imágenes
                     const seg = modal.querySelector('select[name="segmento"]').value;
                     const an = modal.querySelector('select[name="ano"]').value;
                     const m = modal.querySelector('select[name="mes"]').value;
-                    // NO pasar categoría al endpoint - se filtrará localmente
                     await cargarImagenesDisponibles(seg, an, m);
                     actualizarSelectImagenesEnModal(modal);
                 });
+            }
+            
+            // Listeners para cambios en otros filtros
+            filtros.forEach(filtro => {
+                if (filtro.name !== 'segmento') { // Ya tiene su propio listener
+                    filtro.addEventListener('change', async () => {
+                        const seg = modal.querySelector('select[name="segmento"]').value;
+                        const an = modal.querySelector('select[name="ano"]').value;
+                        const m = modal.querySelector('select[name="mes"]').value;
+                        // NO pasar categoría al endpoint - se filtrará localmente
+                        await cargarImagenesDisponibles(seg, an, m);
+                        actualizarSelectImagenesEnModal(modal);
+                    });
+                }
             });
             
             // Event listeners para actualizar carrusel en tiempo real
@@ -1468,7 +1651,13 @@
             }
             
             if (selectCaracteristicas && imagenesDisponibles.caracteristicas) {
-                let options = '<option value="' + (productoEnEdicion.imagen_caracteristicas || '') + '">' + (productoEnEdicion.imagen_caracteristicas || 'Seleccionar...') + '</option>';
+                let options = '<option value="">Sin imagen (Vacío)</option>';
+                
+                // Agregar opción actual si existe
+                if (productoEnEdicion.imagen_caracteristicas && productoEnEdicion.imagen_caracteristicas.trim() !== '') {
+                    options = '<option value="' + productoEnEdicion.imagen_caracteristicas + '">' + productoEnEdicion.imagen_caracteristicas + '</option>' + options;
+                }
+                
                 let imagenesEncontradas = 0;
                 
                 for (const [key, imagenes] of Object.entries(imagenesDisponibles.caracteristicas)) {
@@ -1761,6 +1950,8 @@
                 const formData = new FormData(modal.querySelector('form') || document.createElement('form'));
                 
                 // Recopilar datos manualmente del modal
+                const imagenCaracteristicas = modal.querySelector('select[name="imagen_caracteristicas"]')?.value;
+                
                 const data = {
                     codigo: modal.querySelector('input[name="codigo"]')?.value || productoEnEdicion.codigo,
                     nombre: modal.querySelector('input[name="nombre"]')?.value || productoEnEdicion.nombre,
@@ -1768,7 +1959,7 @@
                     precio: parseFloat(modal.querySelector('input[name="precio"]')?.value) || productoEnEdicion.precio,
                     categoria: modal.querySelector('select[name="categoria"]')?.value || productoEnEdicion.categoria,
                     imagen_listado: modal.querySelector('select[name="imagen_listado"]')?.value || productoEnEdicion.imagen_listado,
-                    imagen_caracteristicas: modal.querySelector('select[name="imagen_caracteristicas"]')?.value || productoEnEdicion.imagen_caracteristicas,
+                    imagen_caracteristicas: imagenCaracteristicas === '' ? null : (imagenCaracteristicas || productoEnEdicion.imagen_caracteristicas),
                     cuotas: JSON.parse(modal.querySelector('textarea[name="cuotas"]')?.value || JSON.stringify(productoEnEdicion.cuotas)),
                     mes: modal.querySelector('select[name="mes"]')?.value || productoEnEdicion.mes,
                     ano: parseInt(modal.querySelector('select[name="ano"]')?.value) || productoEnEdicion.ano,
