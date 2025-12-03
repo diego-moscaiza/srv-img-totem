@@ -209,9 +209,7 @@ async def obtener_imagenes_disponibles(
                                 precios_dir.glob("*.jpg")
                             )
                             for img in sorted(imagenes_listado):
-                                ruta_relativa = img.relative_to(
-                                    imagenes_dir / "catalogos"
-                                )
+                                ruta_relativa = img.relative_to(imagenes_dir)
                                 ruta_relativa_str = str(ruta_relativa).replace(
                                     "\\", "/"
                                 )
@@ -237,9 +235,7 @@ async def obtener_imagenes_disponibles(
                                 caracteristicas_dir.glob("*.png")
                             ) + list(caracteristicas_dir.glob("*.jpg"))
                             for img in sorted(imagenes_carac):
-                                ruta_relativa = img.relative_to(
-                                    imagenes_dir / "catalogos"
-                                )
+                                ruta_relativa = img.relative_to(imagenes_dir)
                                 ruta_relativa_str = str(ruta_relativa).replace(
                                     "\\", "/"
                                 )
