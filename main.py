@@ -129,6 +129,142 @@ async def obtener_segmentos():
         )
 
 
+@app.get("/api/imagenes-disponibles")
+async def obtener_imagenes_disponibles(
+    segmento: str = None, ano: int = None, mes: str = None, categoria: str = None
+):
+    """Obtiene lista de imágenes disponibles, opcionalmente filtradas por segmento, año, mes y categoría"""
+    try:
+        imagenes_disponibles = {"listado": {}, "caracteristicas": {}}
+
+        imagenes_dir = Path(IMAGENES_DIR) / "catalogos"
+
+        if not imagenes_dir.exists():
+            return imagenes_disponibles
+
+        # Normalizar parámetros de entrada
+        segmento = segmento.strip().lower() if segmento and segmento.strip() else None
+        ano = int(ano) if ano else None
+        mes = mes.strip().lower() if mes and mes.strip() else None
+        categoria = (
+            categoria.strip().lower() if categoria and categoria.strip() else None
+        )
+
+        # Recorrer estructura: catalogos/segmento/año/mes/categoría/tipo_imagen
+        for segmento_dir in imagenes_dir.iterdir():
+            if not segmento_dir.is_dir():
+                continue
+
+            segmento_actual = segmento_dir.name.lower()
+
+            # Si se especifica segmento, filtrar exactamente
+            if segmento and segmento_actual != segmento:
+                continue
+
+            for ano_dir in segmento_dir.iterdir():
+                if not ano_dir.is_dir():
+                    continue
+
+                try:
+                    ano_actual = int(ano_dir.name)
+                except ValueError:
+                    continue
+
+                # Si se especifica año, filtrar exactamente
+                if ano and ano_actual != ano:
+                    continue
+
+                for mes_dir in ano_dir.iterdir():
+                    if not mes_dir.is_dir():
+                        continue
+
+                    mes_actual = mes_dir.name.lower()
+
+                    # Si se especifica mes, verificar que esté en el nombre de la carpeta
+                    # Ej: mes="noviembre" debe coincidir con "11-noviembre"
+                    if mes:
+                        # Extraer el nombre del mes de la carpeta (ej: "noviembre" de "11-noviembre")
+                        mes_nombre = (
+                            "-".join(mes_actual.split("-")[1:])
+                            if "-" in mes_actual
+                            else mes_actual
+                        )
+                        if mes_nombre != mes:
+                            continue
+
+                    for categoria_dir in mes_dir.iterdir():
+                        if not categoria_dir.is_dir():
+                            continue
+
+                        categoria_actual = categoria_dir.name.lower()
+
+                        # Si se especifica categoría, filtrar exactamente
+                        if categoria and not categoria_actual.endswith(categoria):
+                            continue
+
+                        # Buscar carpeta "precios" (listado)
+                        precios_dir = categoria_dir / "precios"
+                        if precios_dir.exists():
+                            imagenes_listado = list(precios_dir.glob("*.png")) + list(
+                                precios_dir.glob("*.jpg")
+                            )
+                            for img in sorted(imagenes_listado):
+                                ruta_relativa = img.relative_to(
+                                    imagenes_dir / "catalogos"
+                                )
+                                ruta_relativa_str = str(ruta_relativa).replace(
+                                    "\\", "/"
+                                )
+                                # Construir URL completa
+                                url_completa = (
+                                    f"{SERVER_URL}/api/catalogos/{ruta_relativa_str}"
+                                )
+                                key = f"{segmento_dir.name}/{ano_dir.name}/{mes_dir.name}/{categoria_dir.name}"
+                                if key not in imagenes_disponibles["listado"]:
+                                    imagenes_disponibles["listado"][key] = []
+                                imagenes_disponibles["listado"][key].append(
+                                    {
+                                        "ruta": ruta_relativa_str,
+                                        "url": url_completa,
+                                        "nombre": img.name,
+                                    }
+                                )
+
+                        # Buscar carpeta "caracteristicas"
+                        caracteristicas_dir = categoria_dir / "caracteristicas"
+                        if caracteristicas_dir.exists():
+                            imagenes_carac = list(
+                                caracteristicas_dir.glob("*.png")
+                            ) + list(caracteristicas_dir.glob("*.jpg"))
+                            for img in sorted(imagenes_carac):
+                                ruta_relativa = img.relative_to(
+                                    imagenes_dir / "catalogos"
+                                )
+                                ruta_relativa_str = str(ruta_relativa).replace(
+                                    "\\", "/"
+                                )
+                                # Construir URL completa
+                                url_completa = (
+                                    f"{SERVER_URL}/api/catalogos/{ruta_relativa_str}"
+                                )
+                                key = f"{segmento_dir.name}/{ano_dir.name}/{mes_dir.name}/{categoria_dir.name}"
+                                if key not in imagenes_disponibles["caracteristicas"]:
+                                    imagenes_disponibles["caracteristicas"][key] = []
+                                imagenes_disponibles["caracteristicas"][key].append(
+                                    {
+                                        "ruta": ruta_relativa_str,
+                                        "url": url_completa,
+                                        "nombre": img.name,
+                                    }
+                                )
+
+        return imagenes_disponibles
+    except Exception as e:
+        raise HTTPException(
+            status_code=500, detail=f"Error al obtener imágenes: {str(e)}"
+        )
+
+
 @app.get("/api/catalogo/{segmento}/activo/{categoria}")
 async def obtener_categoria_activa(segmento: str, categoria: str):
     """Obtiene productos de una categoría específica del catálogo activo"""
@@ -256,8 +392,12 @@ async def obtener_catalogo_activo(segmento: str):
         if catalogo_completo_pdf and catalogo_completo_pdf.exists():
             url_relativa_completo = f"/api/catalogo-completo/{segmento}/{anio}/{mes}"
             # Para base64 del catálogo completo, usar la ruta del archivo
-            ruta_rel_completo = catalogo_completo_pdf.relative_to(Path(IMAGENES_DIR) / "catalogos")
-            url_base64_completo = f"/api/pdf-base64/{str(ruta_rel_completo).replace(chr(92), '/')}"
+            ruta_rel_completo = catalogo_completo_pdf.relative_to(
+                Path(IMAGENES_DIR) / "catalogos"
+            )
+            url_base64_completo = (
+                f"/api/pdf-base64/{str(ruta_rel_completo).replace(chr(92), '/')}"
+            )
             catalogo_completo_info = {
                 "nombre": catalogo_completo_pdf.name,
                 "url": f"{SERVER_URL}{url_relativa_completo}",
@@ -602,10 +742,10 @@ async def obtener_pdf_base64(ruta: str, force: bool = False):
     Use ?force=true para forzar la conversión de archivos más grandes (máx 50MB).
     """
     import base64
-    
+
     MAX_SIZE_DEFAULT = 5 * 1024 * 1024  # 5 MB
     MAX_SIZE_FORCED = 50 * 1024 * 1024  # 50 MB
-    
+
     try:
         ruta_decodificada = urllib.parse.unquote(ruta)
         ruta_pdf = Path(IMAGENES_DIR) / "catalogos" / ruta_decodificada
@@ -620,7 +760,7 @@ async def obtener_pdf_base64(ruta: str, force: bool = False):
 
         tamaño_bytes = ruta_pdf.stat().st_size
         tamaño_mb = round(tamaño_bytes / (1024 * 1024), 2)
-        
+
         # Verificar límites de tamaño
         max_size = MAX_SIZE_FORCED if force else MAX_SIZE_DEFAULT
         if tamaño_bytes > max_size:
@@ -790,6 +930,10 @@ async def diagnostico():
 from src.crud_routes import router as crud_router
 
 app.include_router(crud_router)
+
+# Registrar archivos estáticos si la carpeta existe
+if Path("templates").exists():
+    app.mount("/templates", StaticFiles(directory="templates"), name="templates")
 
 
 if __name__ == "__main__":
