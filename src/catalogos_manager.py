@@ -2,6 +2,33 @@ from pathlib import Path
 from datetime import datetime
 from typing import Dict, List, Optional
 from src.database import SessionLocal, Producto
+import os
+
+# Cargar .env si existe (para desarrollo local)
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    pass  # En Docker no necesita dotenv
+
+
+def get_imagenes_base():
+    """
+    Determina la ruta base de imágenes según el entorno:
+    - Docker (producción): /srv/imagenes/catalogos
+    - Local (desarrollo): imagenes/catalogos
+    """
+    # Primero verificar variable de entorno
+    imagenes_dir = os.getenv("IMAGENES_DIR")
+    if imagenes_dir:
+        return Path(imagenes_dir) / "catalogos"
+    
+    # Detectar si estamos en Docker
+    if Path("/srv/imagenes/catalogos").exists():
+        return Path("/srv/imagenes/catalogos")
+    
+    # Local: usar ruta relativa
+    return Path("imagenes/catalogos")
 
 
 class SegmentoCatalogo:
@@ -278,10 +305,11 @@ class CatalogoManager:
 
     def __init__(
         self,
-        imagenes_base: str = "imagenes/catalogos",
+        imagenes_base: str = None,
         segmentos: Optional[List[str]] = None,
     ):
-        self.imagenes_base = Path(imagenes_base)
+        # Usar la función que detecta el entorno automáticamente
+        self.imagenes_base = Path(imagenes_base) if imagenes_base else get_imagenes_base()
         self.segmentos: Dict[str, SegmentoCatalogo] = {}
 
         # Mapeo de categorías (compartido por todos los segmentos)
