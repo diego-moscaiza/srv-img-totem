@@ -598,12 +598,12 @@ async def obtener_pdf_base64(ruta: str, force: bool = False):
     """
     Devuelve un PDF en formato base64 para uso en n8n/WhatsApp.
     Por defecto solo permite archivos menores a 5MB.
-    Use ?force=true para forzar la conversión de archivos más grandes (máx 20MB).
+    Use ?force=true para forzar la conversión de archivos más grandes (máx 50MB).
     """
     import base64
     
     MAX_SIZE_DEFAULT = 5 * 1024 * 1024  # 5 MB
-    MAX_SIZE_FORCED = 20 * 1024 * 1024  # 20 MB
+    MAX_SIZE_FORCED = 50 * 1024 * 1024  # 50 MB
     
     try:
         ruta_decodificada = urllib.parse.unquote(ruta)
@@ -632,7 +632,7 @@ async def obtener_pdf_base64(ruta: str, force: bool = False):
                     "tamaño_mb": tamaño_mb,
                     "mime_type": "application/pdf",
                 },
-                "sugerencia": "Use ?force=true para forzar (máx 20MB) o descargue directamente desde url_relativa",
+                "sugerencia": "Use ?force=true para forzar (máx 50MB) o descargue directamente desde url_relativa",
                 "url_descarga_directa": f"/api/ver-pdf/{ruta}",
             }
 
