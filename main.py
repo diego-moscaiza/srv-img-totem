@@ -138,10 +138,11 @@ async def obtener_categoria_activa(segmento: str, categoria: str):
         mes = catalogo_info["mes"]
         catalogo = catalogo_mgr.cargar_catalogo_mes(anio, mes, segmento)
 
-        # Buscar la categoría
+        # Buscar la categoría usando el mapa específico del segmento
         categoria_encontrada = None
         categoria_carpeta = None
-        for cat_key, cat_nombre in catalogo_mgr.categoria_map.items():
+        segmento_obj = catalogo_mgr.obtener_segmento(segmento)
+        for cat_key, cat_nombre in segmento_obj.categoria_map.items():
             if (
                 cat_nombre.lower() == categoria.lower()
                 or cat_key.lower() == categoria.lower()
