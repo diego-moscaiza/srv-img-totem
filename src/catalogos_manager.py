@@ -2,6 +2,33 @@ from pathlib import Path
 from datetime import datetime
 from typing import Dict, List, Optional
 from src.database import SessionLocal, Producto
+import os
+
+# Cargar .env si existe (para desarrollo local)
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    pass  # En Docker no necesita dotenv
+
+
+def get_imagenes_base():
+    """
+    Determina la ruta base de imágenes según el entorno:
+    - Docker (producción): /srv/imagenes/catalogos
+    - Local (desarrollo): imagenes/catalogos
+    """
+    # Primero verificar variable de entorno
+    imagenes_dir = os.getenv("IMAGENES_DIR")
+    if imagenes_dir:
+        return Path(imagenes_dir) / "catalogos"
+    
+    # Detectar si estamos en Docker
+    if Path("/srv/imagenes/catalogos").exists():
+        return Path("/srv/imagenes/catalogos")
+    
+    # Local: usar ruta relativa
+    return Path("imagenes/catalogos")
 
 
 class SegmentoCatalogo:
@@ -278,32 +305,43 @@ class CatalogoManager:
 
     def __init__(
         self,
-        imagenes_base: str = "imagenes/catalogos",
+        imagenes_base: str = None,
         segmentos: Optional[List[str]] = None,
     ):
-        self.imagenes_base = Path(imagenes_base)
+        # Usar la función que detecta el entorno automáticamente
+        self.imagenes_base = Path(imagenes_base) if imagenes_base else get_imagenes_base()
         self.segmentos: Dict[str, SegmentoCatalogo] = {}
 
-        # Mapeo de categorías (compartido por todos los segmentos)
-        # Las claves son nombres de carpetas en imagenes/, valores son nombres en BD
-        self.categoria_map = {
+        # Mapeo de categorías ESPECÍFICO POR SEGMENTO
+        # FNB: 1-celulares, 2-laptops, 3-televisores, 4-refrigeradoras, 5-lavadoras
+        categoria_map_fnb = {
             "1-celulares": "celulares",
             "2-laptops": "laptops",
-            "2-televisores": "2-televisores",
             "3-televisores": "televisores",
-            "3-refrigeradores": "refrigeradores",
             "4-refrigeradoras": "refrigeradoras",
-            "4-lavadoras": "4-lavadoras",
             "5-lavadoras": "lavadoras",
+        }
+
+        # GASO: 1-celulares, 2-televisores, 3-refrigeradores, 4-lavadoras, 5-fusion
+        categoria_map_gaso = {
+            "1-celulares": "celulares",
+            "2-televisores": "televisores",
+            "3-refrigeradores": "refrigeradores",
+            "4-lavadoras": "lavadoras",
             "5-fusion": "fusion",
         }
 
-        # Crear instancias de cada segmento
+        # Crear instancias de cada segmento con su mapeo específico
         segmentos_default = segmentos or ["fnb", "gaso"]
         for segmento_nombre in segmentos_default:
+            # Seleccionar mapa según segmento
+            categoria_map = categoria_map_fnb if segmento_nombre == "fnb" else categoria_map_gaso
             self.segmentos[segmento_nombre] = SegmentoCatalogo(
-                segmento_nombre, self.categoria_map, self.imagenes_base
+                segmento_nombre, categoria_map, self.imagenes_base
             )
+        
+        # Guardar un mapa genérico para compatibilidad (usado ocasionalmente)
+        self.categoria_map = {**categoria_map_fnb, **categoria_map_gaso}
 
     def obtener_segmento(self, nombre_segmento: str = "fnb") -> SegmentoCatalogo:
         """Obtiene la instancia de un segmento específico"""
