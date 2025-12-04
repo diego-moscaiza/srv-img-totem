@@ -64,7 +64,6 @@ class Producto(Base):
         String(50), default="disponible", index=True
     )  # disponible, no disponible, agotado, etc.
     stock = Column(Boolean, default=True)
-    stock = Column(Boolean, default=True)
 
 
 # Crear las tablas
