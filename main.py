@@ -131,7 +131,10 @@ async def obtener_segmentos():
 
 @app.get("/api/imagenes-disponibles")
 async def obtener_imagenes_disponibles(
-    segmento: str = None, ano: int = None, mes: str = None, categoria: str = None
+    segmento: str | None = None, 
+    ano: int | None = None, 
+    mes: str | None = None, 
+    categoria: str | None = None
 ):
     """Obtiene lista de imágenes disponibles, opcionalmente filtradas por segmento, año, mes y categoría"""
     try:
@@ -143,10 +146,10 @@ async def obtener_imagenes_disponibles(
             return imagenes_disponibles
 
         # Normalizar parámetros de entrada
-        segmento = segmento.strip().lower() if segmento and segmento.strip() else None
-        ano = int(ano) if ano else None
-        mes = mes.strip().lower() if mes and mes.strip() else None
-        categoria = (
+        segmento_filtro = segmento.strip().lower() if segmento and segmento.strip() else None
+        ano_filtro = int(ano) if ano else None
+        mes_filtro = mes.strip().lower() if mes and mes.strip() else None
+        categoria_filtro = (
             categoria.strip().lower() if categoria and categoria.strip() else None
         )
 
@@ -158,7 +161,7 @@ async def obtener_imagenes_disponibles(
             segmento_actual = segmento_dir.name.lower()
 
             # Si se especifica segmento, filtrar exactamente
-            if segmento and segmento_actual != segmento:
+            if segmento_filtro and segmento_actual != segmento_filtro:
                 continue
 
             for ano_dir in segmento_dir.iterdir():
@@ -171,7 +174,7 @@ async def obtener_imagenes_disponibles(
                     continue
 
                 # Si se especifica año, filtrar exactamente
-                if ano and ano_actual != ano:
+                if ano_filtro and ano_actual != ano_filtro:
                     continue
 
                 for mes_dir in ano_dir.iterdir():
@@ -182,14 +185,14 @@ async def obtener_imagenes_disponibles(
 
                     # Si se especifica mes, verificar que esté en el nombre de la carpeta
                     # Ej: mes="noviembre" debe coincidir con "11-noviembre"
-                    if mes:
+                    if mes_filtro:
                         # Extraer el nombre del mes de la carpeta (ej: "noviembre" de "11-noviembre")
                         mes_nombre = (
                             "-".join(mes_actual.split("-")[1:])
                             if "-" in mes_actual
                             else mes_actual
                         )
-                        if mes_nombre != mes:
+                        if mes_nombre != mes_filtro:
                             continue
 
                     for categoria_dir in mes_dir.iterdir():
@@ -199,14 +202,20 @@ async def obtener_imagenes_disponibles(
                         categoria_actual = categoria_dir.name.lower()
 
                         # Si se especifica categoría, filtrar exactamente
-                        if categoria and not categoria_actual.endswith(categoria):
+                        if categoria_filtro and not categoria_actual.endswith(categoria_filtro):
                             continue
 
                         # Buscar carpeta "precios" (listado)
                         precios_dir = categoria_dir / "precios"
                         if precios_dir.exists():
-                            imagenes_listado = list(precios_dir.glob("*.png")) + list(
-                                precios_dir.glob("*.jpg")
+                            # Buscar todas las extensiones de imagen soportadas (case-insensitive)
+                            # Usar set() para evitar duplicados en Windows
+                            imagenes_listado = set(
+                                list(precios_dir.glob("*.png"))
+                                + list(precios_dir.glob("*.jpg"))
+                                + list(precios_dir.glob("*.jpeg"))
+                                + list(precios_dir.glob("*.gif"))
+                                + list(precios_dir.glob("*.webp"))
                             )
                             for img in sorted(imagenes_listado):
                                 ruta_relativa = img.relative_to(imagenes_dir)
@@ -231,10 +240,16 @@ async def obtener_imagenes_disponibles(
                         # Buscar carpeta "caracteristicas"
                         caracteristicas_dir = categoria_dir / "caracteristicas"
                         if caracteristicas_dir.exists():
-                            imagenes_carac = list(
-                                caracteristicas_dir.glob("*.png")
-                            ) + list(caracteristicas_dir.glob("*.jpg"))
-                            for img in sorted(imagenes_carac):
+                            # Buscar todas las extensiones de imagen soportadas (case-insensitive)
+                            # Usar set() para evitar duplicados en Windows
+                            imagenes_caracteristicas = set(
+                                list(caracteristicas_dir.glob("*.png"))
+                                + list(caracteristicas_dir.glob("*.jpg"))
+                                + list(caracteristicas_dir.glob("*.jpeg"))
+                                + list(caracteristicas_dir.glob("*.gif"))
+                                + list(caracteristicas_dir.glob("*.webp"))
+                            )
+                            for img in sorted(imagenes_caracteristicas):
                                 ruta_relativa = img.relative_to(imagenes_dir)
                                 ruta_relativa_str = str(ruta_relativa).replace(
                                     "\\", "/"
