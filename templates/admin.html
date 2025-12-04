@@ -775,6 +775,17 @@
         let productosGlobal = [];
         let imagenesDisponibles = { listado: {}, caracteristicas: {} };
         
+        // Función para construir URL de imagen correctamente
+        function construirUrlImagen(ruta) {
+            if (!ruta || ruta.trim() === '') return '';
+            // Si ya tiene el prefijo /api/catalogos/, devolverla tal cual
+            if (ruta.startsWith('/api/catalogos/')) return ruta;
+            // Si empieza con catalogos/, agregar /api/
+            if (ruta.startsWith('catalogos/')) return '/api/' + ruta;
+            // Si no tiene prefijo, agregar /api/catalogos/
+            return '/api/catalogos/' + ruta;
+        }
+        
         // Mapeo de categorías por segmento
         const categoriasPorSegmento = {
             'fnb': ['celulares', 'laptops', 'televisores', 'refrigeradoras', 'lavadoras'],
@@ -915,7 +926,7 @@
                     
                     // Mostrar todas las imágenes de este directorio
                     imagenes.forEach(img => {
-                        options += `<option value="${img.url}">${key} - ${img.nombre}</option>`;
+                        options += `<option value="${img.ruta}">${key} - ${img.nombre}</option>`;
                         imagenesEncontradas++;
                     });
                 }
@@ -949,7 +960,7 @@
                     
                     // Mostrar todas las imágenes de este directorio
                     imagenes.forEach(img => {
-                        options += `<option value="${img.url}">${key} - ${img.nombre}</option>`;
+                        options += `<option value="${img.ruta}">${key} - ${img.nombre}</option>`;
                         imagenesEncontradas++;
                     });
                 }
@@ -983,7 +994,7 @@
                     
                     // Mostrar todas las imágenes de este directorio
                     imagenes.forEach(img => {
-                        options += `<option value="${img.url}">${key} - ${img.nombre}</option>`;
+                        options += `<option value="${img.ruta}">${key} - ${img.nombre}</option>`;
                         imagenesEncontradas++;
                     });
                 }
@@ -1114,7 +1125,7 @@
                 selectListado.addEventListener('change', (e) => {
                     if (e.target.value.trim() !== '') {
                         const imgSlide = slides[0];
-                        imgSlide.innerHTML = `<img src="${e.target.value}" style="width: 100%; height: 100%; object-fit: contain; display: block;">`;
+                        imgSlide.innerHTML = `<img src="${construirUrlImagen(e.target.value)}" style="width: 100%; height: 100%; object-fit: contain; display: block;">`;
                         imgSlide.style.color = 'transparent';
                     } else {
                         slides[0].innerHTML = 'Seleccione imagen de listado';
@@ -1127,7 +1138,7 @@
                 selectCaracteristicas.addEventListener('change', (e) => {
                     if (e.target.value.trim() !== '') {
                         const imgSlide = slides[1];
-                        imgSlide.innerHTML = `<img src="${e.target.value}" style="width: 100%; height: 100%; object-fit: contain; display: block;">`;
+                        imgSlide.innerHTML = `<img src="${construirUrlImagen(e.target.value)}" style="width: 100%; height: 100%; object-fit: contain; display: block;">`;
                         imgSlide.style.color = 'transparent';
                     } else {
                         slides[1].innerHTML = 'Seleccione imagen de características';
@@ -1316,7 +1327,7 @@
                     const segmentoColor = p.segmento === 'fnb' ? '#cfe2ff' : '#fff3cd';
                     const segmentoTextColor = p.segmento === 'fnb' ? '#084298' : '#664d03';
                     
-                    const imagenUrl = p.imagen_listado ? p.imagen_listado : '';
+                    const imagenUrl = construirUrlImagen(p.imagen_listado);
                     
                     const card = document.createElement('div');
                     card.className = 'producto-card';
@@ -1401,7 +1412,7 @@
             // Imagen Listado
             if (producto.imagen_listado && producto.imagen_listado.trim() !== '') {
                 html += `<div class="slide" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; opacity: 1; transition: opacity 0.3s ease;">
-                            <img src="${producto.imagen_listado}" style="width: 100%; height: 100%; object-fit: contain; display: block;">
+                            <img src="${construirUrlImagen(producto.imagen_listado)}" style="width: 100%; height: 100%; object-fit: contain; display: block;">
                         </div>`;
             } else {
                 html += `<div class="slide" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; opacity: 1; transition: opacity 0.3s ease; background: #f9fafd; color: #999; font-size: 0.9em;">Sin imagen</div>`;
@@ -1410,7 +1421,7 @@
             // Imagen Características
             if (producto.imagen_caracteristicas && producto.imagen_caracteristicas.trim() !== '') {
                 html += `<div class="slide" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; opacity: 0; transition: opacity 0.3s ease;">
-                            <img src="${producto.imagen_caracteristicas}" style="width: 100%; height: 100%; object-fit: contain; display: block;">
+                            <img src="${construirUrlImagen(producto.imagen_caracteristicas)}" style="width: 100%; height: 100%; object-fit: contain; display: block;">
                         </div>`;
             } else {
                 html += `<div class="slide" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; opacity: 0; transition: opacity 0.3s ease; background: #f9fafd; color: #999; font-size: 0.9em;">Sin imagen</div>`;
@@ -1419,7 +1430,7 @@
             // Imagen Características 2
             if (producto.imagen_caracteristicas_2 && producto.imagen_caracteristicas_2.trim() !== '') {
                 html += `<div class="slide" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; opacity: 0; transition: opacity 0.3s ease;">
-                            <img src="${producto.imagen_caracteristicas_2}" style="width: 100%; height: 100%; object-fit: contain; display: block;">
+                            <img src="${construirUrlImagen(producto.imagen_caracteristicas_2)}" style="width: 100%; height: 100%; object-fit: contain; display: block;">
                         </div>`;
             } else {
                 html += `<div class="slide" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; opacity: 0; transition: opacity 0.3s ease; background: #f9fafd; color: #999; font-size: 0.9em;">Sin imagen</div>`;
