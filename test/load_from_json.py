@@ -250,21 +250,19 @@ def cargar_productos_desde_json(
                                 if marca and marca not in descripcion:
                                     descripcion = f"{marca} - {descripcion}" if descripcion else marca
 
-                                # Buscar imagen de precios
+                                # Buscar imagen de precios (se asigna automáticamente)
                                 imagen_precio = buscar_imagen_por_numero(precios_dir, numero)
                                 
-                                # Buscar imagen de características
-                                imagen_carac = buscar_imagen_por_numero(caracteristicas_dir, numero)
+                                # Las imágenes de características NO se asignan automáticamente
+                                # El usuario las selecciona manualmente desde el panel admin
+                                # Solo construimos la ruta de precios
 
-                                # Construir rutas relativas (desde imagenes/)
+                                # Construir rutas relativas (desde imagenes/catalogos/)
+                                # El endpoint /api/catalogos/{ruta} espera rutas como "fnb/2025/..."
                                 ruta_precio = None
-                                ruta_carac = None
 
                                 if imagen_precio:
-                                    ruta_precio = str(imagen_precio.relative_to(IMAGENES_DIR.parent)).replace("\\", "/")
-                                
-                                if imagen_carac:
-                                    ruta_carac = str(imagen_carac.relative_to(IMAGENES_DIR.parent)).replace("\\", "/")
+                                    ruta_precio = str(imagen_precio.relative_to(IMAGENES_DIR)).replace("\\", "/")
 
                                 # Verificar si el producto ya existe
                                 producto_existente = db.query(Producto).filter(
@@ -276,13 +274,13 @@ def cargar_productos_desde_json(
                                         productos_omitidos += 1
                                         continue
                                     else:
-                                        # Actualizar producto existente
+                                        # Actualizar producto existente (NO actualiza imagen_caracteristicas)
                                         producto_existente.nombre = nombre
                                         producto_existente.descripcion = descripcion
                                         producto_existente.precio = precio
                                         producto_existente.categoria = categoria_nombre
                                         producto_existente.imagen_listado = ruta_precio
-                                        producto_existente.imagen_caracteristicas = ruta_carac
+                                        # imagen_caracteristicas NO se actualiza automáticamente
                                         producto_existente.cuotas = cuotas
                                         producto_existente.mes = mes_texto
                                         producto_existente.ano = int(ano)
@@ -291,7 +289,7 @@ def cargar_productos_desde_json(
                                         productos_categoria += 1
                                         continue
 
-                                # Crear nuevo producto
+                                # Crear nuevo producto (imagen_caracteristicas queda vacía)
                                 producto = Producto(
                                     codigo=codigo,
                                     nombre=nombre,
@@ -299,7 +297,7 @@ def cargar_productos_desde_json(
                                     precio=precio,
                                     categoria=categoria_nombre,
                                     imagen_listado=ruta_precio,
-                                    imagen_caracteristicas=ruta_carac,
+                                    imagen_caracteristicas=None,  # Se asigna manualmente desde admin
                                     cuotas=cuotas,
                                     mes=mes_texto,
                                     ano=int(ano),
