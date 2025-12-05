@@ -615,7 +615,7 @@
                                     <label>Estado *</label>
                                     <select name="estado" required>
                                         <option value="disponible">Disponible</option>
-                                        <option value="no disponible">No Disponible</option>
+                                        <option value="no_disponible">No Disponible</option>
                                         <option value="agotado">Agotado</option>
                                     </select>
                                 </div>
@@ -778,12 +778,28 @@
         // Función para construir URL de imagen correctamente
         function construirUrlImagen(ruta) {
             if (!ruta || ruta.trim() === '') return '';
+            
+            // Si ya es una URL absoluta (comienza con http:// o https://), devolverla tal cual
+            if (ruta.startsWith('http://') || ruta.startsWith('https://')) {
+                return ruta;
+            }
+            
             // Si ya tiene el prefijo /api/catalogos/, devolverla tal cual
             if (ruta.startsWith('/api/catalogos/')) return ruta;
+            
             // Si empieza con catalogos/, agregar /api/
             if (ruta.startsWith('catalogos/')) return '/api/' + ruta;
+            
             // Si no tiene prefijo, agregar /api/catalogos/
             return '/api/catalogos/' + ruta;
+        }
+        
+        // Agregar parámetro de caché-busting para forzar recarga de imágenes
+        function construirUrlImagenConCachebust(ruta) {
+            const url = construirUrlImagen(ruta);
+            if (!url) return '';
+            // Agregar timestamp para evitar cache del navegador
+            return url + '?v=' + Date.now();
         }
         
         // Mapeo de categorías por segmento
@@ -926,7 +942,7 @@
                     
                     // Mostrar todas las imágenes de este directorio
                     imagenes.forEach(img => {
-                        options += `<option value="${img.ruta}">${key} - ${img.nombre}</option>`;
+                        options += `<option value="${img.url}">${key} - ${img.nombre}</option>`;
                         imagenesEncontradas++;
                     });
                 }
@@ -960,7 +976,7 @@
                     
                     // Mostrar todas las imágenes de este directorio
                     imagenes.forEach(img => {
-                        options += `<option value="${img.ruta}">${key} - ${img.nombre}</option>`;
+                        options += `<option value="${img.url}">${key} - ${img.nombre}</option>`;
                         imagenesEncontradas++;
                     });
                 }
@@ -994,7 +1010,7 @@
                     
                     // Mostrar todas las imágenes de este directorio
                     imagenes.forEach(img => {
-                        options += `<option value="${img.ruta}">${key} - ${img.nombre}</option>`;
+                        options += `<option value="${img.url}">${key} - ${img.nombre}</option>`;
                         imagenesEncontradas++;
                     });
                 }
@@ -1125,7 +1141,7 @@
                 selectListado.addEventListener('change', (e) => {
                     if (e.target.value.trim() !== '') {
                         const imgSlide = slides[0];
-                        imgSlide.innerHTML = `<img src="${construirUrlImagen(e.target.value)}" style="width: 100%; height: 100%; object-fit: contain; display: block;">`;
+                        imgSlide.innerHTML = `<img src="${construirUrlImagenConCachebust(e.target.value)}" style="width: 100%; height: 100%; object-fit: contain; display: block;">`;
                         imgSlide.style.color = 'transparent';
                     } else {
                         slides[0].innerHTML = 'Seleccione imagen de listado';
@@ -1138,7 +1154,7 @@
                 selectCaracteristicas.addEventListener('change', (e) => {
                     if (e.target.value.trim() !== '') {
                         const imgSlide = slides[1];
-                        imgSlide.innerHTML = `<img src="${construirUrlImagen(e.target.value)}" style="width: 100%; height: 100%; object-fit: contain; display: block;">`;
+                        imgSlide.innerHTML = `<img src="${construirUrlImagenConCachebust(e.target.value)}" style="width: 100%; height: 100%; object-fit: contain; display: block;">`;
                         imgSlide.style.color = 'transparent';
                     } else {
                         slides[1].innerHTML = 'Seleccione imagen de características';
@@ -1161,7 +1177,17 @@
         async function crearProducto() {
             try {
                 const formData = new FormData(document.getElementById('crearForm'));
-                const cuotas = JSON.parse(formData.get('cuotas'));
+                
+                // Parsear cuotas de forma segura
+                let cuotas = null;
+                const cuotasRaw = formData.get('cuotas');
+                if (cuotasRaw && cuotasRaw.trim() !== '') {
+                    try {
+                        cuotas = JSON.parse(cuotasRaw);
+                    } catch(e) {
+                        console.warn('⚠️ No se pudo parsear cuotas, usando null:', e.message);
+                    }
+                }
                 
                 const data = {
                     codigo: formData.get('codigo'),
@@ -1170,8 +1196,8 @@
                     precio: parseFloat(formData.get('precio')),
                     categoria: formData.get('categoria'),
                     imagen_listado: formData.get('imagen_listado'),
-                    imagen_caracteristicas: formData.get('imagen_caracteristicas'),
-                    imagen_caracteristicas_2: formData.get('imagen_caracteristicas_2'),
+                    imagen_caracteristicas: formData.get('imagen_caracteristicas') || null,
+                    imagen_caracteristicas_2: formData.get('imagen_caracteristicas_2') || null,
                     cuotas: cuotas,
                     mes: formData.get('mes'),
                     ano: parseInt(formData.get('ano')),
@@ -1179,6 +1205,8 @@
                     estado: formData.get('estado'),
                     stock: formData.get('stock') === 'true'
                 };
+                
+                console.log('📤 Enviando datos para crear producto:', data);
 
                 const response = await fetch('/api/productos', {
                     method: 'POST',
@@ -1496,7 +1524,7 @@
             html += '<h4>🏷️ Clasificación</h4>';
             html += '<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">';
             html += '<div class="form-group"><label style="margin-bottom: 6px;">Segmento</label><select name="segmento"><option value="fnb" ' + (producto.segmento === 'fnb' ? 'selected' : '') + '>FNB</option><option value="gaso" ' + (producto.segmento === 'gaso' ? 'selected' : '') + '>GASO</option></select></div>';
-            html += '<div class="form-group"><label style="margin-bottom: 6px;">Estado</label><select name="estado"><option value="disponible" ' + (producto.estado === 'disponible' ? 'selected' : '') + '>Disponible</option><option value="no disponible" ' + (producto.estado === 'no disponible' ? 'selected' : '') + '>No Disponible</option><option value="agotado" ' + (producto.estado === 'agotado' ? 'selected' : '') + '>Agotado</option></select></div>';
+            html += '<div class="form-group"><label style="margin-bottom: 6px;">Estado</label><select name="estado"><option value="disponible" ' + (producto.estado === 'disponible' ? 'selected' : '') + '>Disponible</option><option value="no_disponible" ' + (producto.estado === 'no_disponible' ? 'selected' : '') + '>No Disponible</option><option value="agotado" ' + (producto.estado === 'agotado' ? 'selected' : '') + '>Agotado</option></select></div>';
             html += '</div>';
             html += '<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">';
             html += '<div class="form-group"><label style="margin-bottom: 6px;">Mes</label><select name="mes">';
@@ -1645,27 +1673,42 @@
             
             if (selectListado && slides.length > 0) {
                 selectListado.addEventListener('change', (e) => {
-                    const imgSlide = slides[0].querySelector('img');
-                    if (imgSlide) {
-                        imgSlide.src = e.target.value;
+                    if (e.target.value.trim() !== '') {
+                        const imgSlide = slides[0];
+                        imgSlide.innerHTML = `<img src="${construirUrlImagenConCachebust(e.target.value)}" style="width: 100%; height: 100%; object-fit: contain; display: block;">`;
+                        imgSlide.style.color = 'transparent';
+                        console.log('📸 [MODAL] Imagen listado actualizada:', e.target.value);
+                    } else {
+                        slides[0].innerHTML = 'Seleccione imagen de listado';
+                        slides[0].style.color = '#999';
                     }
                 });
             }
             
             if (selectCaracteristicas && slides.length > 1) {
                 selectCaracteristicas.addEventListener('change', (e) => {
-                    const imgSlide = slides[1].querySelector('img');
-                    if (imgSlide) {
-                        imgSlide.src = e.target.value;
+                    if (e.target.value.trim() !== '') {
+                        const imgSlide = slides[1];
+                        imgSlide.innerHTML = `<img src="${construirUrlImagenConCachebust(e.target.value)}" style="width: 100%; height: 100%; object-fit: contain; display: block;">`;
+                        imgSlide.style.color = 'transparent';
+                        console.log('📸 [MODAL] Imagen características actualizada:', e.target.value);
+                    } else {
+                        slides[1].innerHTML = 'Seleccione imagen de características';
+                        slides[1].style.color = '#999';
                     }
                 });
             }
 
             if (selectCaracteristicas2 && slides.length > 2) {
                 selectCaracteristicas2.addEventListener('change', (e) => {
-                    const imgSlide = slides[2].querySelector('img');
-                    if (imgSlide) {
-                        imgSlide.src = e.target.value;
+                    if (e.target.value.trim() !== '') {
+                        const imgSlide = slides[2];
+                        imgSlide.innerHTML = `<img src="${construirUrlImagenConCachebust(e.target.value)}" style="width: 100%; height: 100%; object-fit: contain; display: block;">`;
+                        imgSlide.style.color = 'transparent';
+                        console.log('📸 [MODAL] Imagen características 2 actualizada:', e.target.value);
+                    } else {
+                        slides[2].innerHTML = 'Seleccione imagen de características 2';
+                        slides[2].style.color = '#999';
                     }
                 });
             }
@@ -2096,6 +2139,9 @@
                     segmento: modal.querySelector('select[name="segmento"]')?.value || productoEnEdicion.segmento,
                     estado: modal.querySelector('select[name="estado"]')?.value || productoEnEdicion.estado
                 };
+                
+                console.log('📤 Guardando producto:', data);
+                console.log('   Estado seleccionado:', modal.querySelector('select[name="estado"]')?.value);
 
                 const response = await fetch('/api/productos/' + productoEnEdicion.id, {
                     method: 'PUT',
