@@ -29,12 +29,21 @@ from sqlalchemy import cast, String, Integer
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from src.database import SessionLocal, Producto, Base, engine
+from src.config import SERVER_URL
 
 # Crear tablas si no existen
 Base.metadata.create_all(bind=engine)
 
 # Configuración
 IMAGENES_DIR = Path(__file__).parent.parent / "imagenes" / "catalogos"
+
+def construir_url_imagen(ruta_relativa: str | None) -> str | None:
+    """Construye URL absoluta para una imagen desde su ruta relativa"""
+    if not ruta_relativa:
+        return None
+    server_url = SERVER_URL.rstrip("/")
+    ruta_limpia = ruta_relativa.lstrip("/")
+    return f"{server_url}/api/catalogos/{ruta_limpia}"
 
 # Mapeo de categorías por carpeta
 CATEGORIA_MAP = {
@@ -257,12 +266,13 @@ def cargar_productos_desde_json(
                                 # El usuario las selecciona manualmente desde el panel admin
                                 # Solo construimos la ruta de precios
 
-                                # Construir rutas relativas (desde imagenes/catalogos/)
-                                # El endpoint /api/catalogos/{ruta} espera rutas como "fnb/2025/..."
-                                ruta_precio = None
+                                # Construir URLs absolutas para las imágenes
+                                # El frontend espera URLs completas como http://192.168.5.85:8000/api/catalogos/fnb/2025/...
+                                url_precio = None
 
                                 if imagen_precio:
-                                    ruta_precio = str(imagen_precio.relative_to(IMAGENES_DIR)).replace("\\", "/")
+                                    ruta_relativa = str(imagen_precio.relative_to(IMAGENES_DIR)).replace("\\", "/")
+                                    url_precio = construir_url_imagen(ruta_relativa)
 
                                 # Verificar si el producto ya existe
                                 producto_existente = db.query(Producto).filter(
@@ -279,7 +289,7 @@ def cargar_productos_desde_json(
                                         producto_existente.descripcion = descripcion
                                         producto_existente.precio = precio
                                         producto_existente.categoria = categoria_nombre
-                                        producto_existente.imagen_listado = ruta_precio
+                                        producto_existente.imagen_listado = url_precio
                                         # imagen_caracteristicas NO se actualiza automáticamente
                                         producto_existente.cuotas = cuotas
                                         producto_existente.mes = mes_texto
@@ -296,7 +306,7 @@ def cargar_productos_desde_json(
                                     descripcion=descripcion,
                                     precio=precio,
                                     categoria=categoria_nombre,
-                                    imagen_listado=ruta_precio,
+                                    imagen_listado=url_precio,
                                     imagen_caracteristicas=None,  # Se asigna manualmente desde admin
                                     cuotas=cuotas,
                                     mes=mes_texto,
