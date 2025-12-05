@@ -273,6 +273,97 @@ async def obtener_imagenes_disponibles(
         )
 
 
+
+@app.get("/api/catalogo/{segmento}/mes-actual/disponibles")
+async def obtener_productos_disponibles_mes_actual(segmento: str):
+    """Obtiene SOLO los productos disponibles del mes actual (filtra por estado='disponible')"""
+    try:
+        catalogo_info = catalogo_mgr.detectar_catalogo_actual(segmento)
+        anio = catalogo_info["año"]
+        mes = catalogo_info["mes"]
+        catalogo = catalogo_mgr.cargar_catalogo_mes(anio, mes, segmento)
+
+        # Construir catálogo FILTRADO con solo productos disponibles
+        catalogo_con_pdfs = {}
+        for categoria_nombre, productos in catalogo.items():
+            # Filtrar solo productos con estado='disponible'
+            productos_disponibles = [p for p in productos if p.get("estado") == "disponible"]
+            
+            if not productos_disponibles:
+                continue  # Saltar categoría si no tiene productos disponibles
+
+            # Buscar la carpeta correspondiente a esta categoría
+            categoria_carpeta = None
+            for cat_key, cat_nom in catalogo_mgr.categoria_map.items():
+                if cat_nom == categoria_nombre:
+                    categoria_carpeta = cat_key
+                    break
+
+            # Obtener PDF de la categoría
+            pdf_info = None
+            if categoria_carpeta:
+                ruta_pdf = catalogo_mgr.obtener_pdf_categoria(
+                    anio, mes, categoria_carpeta, segmento
+                )
+                if ruta_pdf and ruta_pdf.exists():
+                    ruta_relativa = ruta_pdf.relative_to(
+                        Path(IMAGENES_DIR) / "catalogos"
+                    )
+                    ruta_relativa_str = str(ruta_relativa).replace("\\", "/")
+                    url_relativa_pdf = f"/api/ver-pdf/{ruta_relativa_str}"
+                    url_base64_pdf = f"/api/pdf-base64/{ruta_relativa_str}"
+                    pdf_info = {
+                        "nombre": ruta_pdf.name,
+                        "url": f"{SERVER_URL}{url_relativa_pdf}",
+                        "url_relativa": url_relativa_pdf,
+                        "url_base64": url_base64_pdf,
+                        "tamaño_mb": round(ruta_pdf.stat().st_size / (1024 * 1024), 2),
+                    }
+
+            catalogo_con_pdfs[categoria_nombre] = {
+                "pdf": pdf_info,
+                "total_productos": len(productos_disponibles),
+                "productos": productos_disponibles,
+            }
+
+        # Obtener catálogo completo PDF
+        catalogo_completo_pdf = catalogo_mgr.obtener_pdf_catalogo_completo(
+            anio, mes, segmento
+        )
+        catalogo_completo_info = None
+        if catalogo_completo_pdf and catalogo_completo_pdf.exists():
+            url_relativa_completo = f"/api/catalogo-completo/{segmento}/{anio}/{mes}"
+            ruta_rel_completo = catalogo_completo_pdf.relative_to(
+                Path(IMAGENES_DIR) / "catalogos"
+            )
+            url_base64_completo = (
+                f"/api/pdf-base64/{str(ruta_rel_completo).replace(chr(92), '/')}"
+            )
+            catalogo_completo_info = {
+                "nombre": catalogo_completo_pdf.name,
+                "url": f"{SERVER_URL}{url_relativa_completo}",
+                "url_base64": url_base64_completo,
+                "tamaño_mb": round(
+                    catalogo_completo_pdf.stat().st_size / (1024 * 1024), 2
+                ),
+            }
+
+        return {
+            "segmento": segmento,
+            "catalogo_info": catalogo_info,
+            "catalogo_completo_pdf": catalogo_completo_info,
+            "categorias": catalogo_con_pdfs,
+            "total_categorias": len(catalogo_con_pdfs),
+            "total_productos_disponibles": sum(
+                len(v.get("productos", [])) for v in catalogo_con_pdfs.values()
+            ),
+        }
+    except Exception as e:
+        raise HTTPException(
+            status_code=500, detail=f"Error al obtener productos disponibles: {str(e)}"
+        )
+
+
 @app.get("/api/catalogo/{segmento}/mes-actual/{categoria}")
 async def obtener_categoria_activa(segmento: str, categoria: str):
     """Obtiene productos de una categoría específica del catálogo activo"""
@@ -427,6 +518,97 @@ async def obtener_catalogo_activo(segmento: str):
     except Exception as e:
         raise HTTPException(
             status_code=500, detail=f"Error al obtener catálogo activo: {str(e)}"
+        )
+
+
+@app.get("/api/catalogo/{segmento}/mes-actual/productos-disponibles")
+async def obtener_productos_disponibles(segmento: str):
+    """Obtiene solo los productos disponibles del mes actual (estado='disponible')"""
+    try:
+        catalogo_info = catalogo_mgr.detectar_catalogo_actual(segmento)
+        anio = catalogo_info["año"]
+        mes = catalogo_info["mes"]
+        catalogo = catalogo_mgr.cargar_catalogo_mes(anio, mes, segmento)
+
+        # Construir catálogo FILTRADO con solo productos disponibles
+        catalogo_con_pdfs = {}
+        for categoria_nombre, productos in catalogo.items():
+            # Filtrar solo productos con estado='disponible'
+            productos_disponibles = [p for p in productos if p.get("estado") == "disponible"]
+            
+            if not productos_disponibles:
+                continue  # Saltar categoría si no tiene productos disponibles
+
+            # Buscar la carpeta correspondiente a esta categoría
+            categoria_carpeta = None
+            for cat_key, cat_nom in catalogo_mgr.categoria_map.items():
+                if cat_nom == categoria_nombre:
+                    categoria_carpeta = cat_key
+                    break
+
+            # Obtener PDF de la categoría
+            pdf_info = None
+            if categoria_carpeta:
+                ruta_pdf = catalogo_mgr.obtener_pdf_categoria(
+                    anio, mes, categoria_carpeta, segmento
+                )
+                if ruta_pdf and ruta_pdf.exists():
+                    ruta_relativa = ruta_pdf.relative_to(
+                        Path(IMAGENES_DIR) / "catalogos"
+                    )
+                    ruta_relativa_str = str(ruta_relativa).replace("\\", "/")
+                    url_relativa_pdf = f"/api/ver-pdf/{ruta_relativa_str}"
+                    url_base64_pdf = f"/api/pdf-base64/{ruta_relativa_str}"
+                    pdf_info = {
+                        "nombre": ruta_pdf.name,
+                        "url": f"{SERVER_URL}{url_relativa_pdf}",
+                        "url_relativa": url_relativa_pdf,
+                        "url_base64": url_base64_pdf,
+                        "tamaño_mb": round(ruta_pdf.stat().st_size / (1024 * 1024), 2),
+                    }
+
+            catalogo_con_pdfs[categoria_nombre] = {
+                "pdf": pdf_info,
+                "total_productos": len(productos_disponibles),
+                "productos": productos_disponibles,
+            }
+
+        # Obtener catálogo completo PDF
+        catalogo_completo_pdf = catalogo_mgr.obtener_pdf_catalogo_completo(
+            anio, mes, segmento
+        )
+        catalogo_completo_info = None
+        if catalogo_completo_pdf and catalogo_completo_pdf.exists():
+            url_relativa_completo = f"/api/catalogo-completo/{segmento}/{anio}/{mes}"
+            ruta_rel_completo = catalogo_completo_pdf.relative_to(
+                Path(IMAGENES_DIR) / "catalogos"
+            )
+            url_base64_completo = (
+                f"/api/pdf-base64/{str(ruta_rel_completo).replace(chr(92), '/')}"
+            )
+            catalogo_completo_info = {
+                "nombre": catalogo_completo_pdf.name,
+                "url": f"{SERVER_URL}{url_relativa_completo}",
+                "url_base64": url_base64_completo,
+                "tamaño_mb": round(
+                    catalogo_completo_pdf.stat().st_size / (1024 * 1024), 2
+                ),
+            }
+
+        return {
+            "segmento": segmento,
+            "catalogo_info": catalogo_info,
+            "catalogo_completo_pdf": catalogo_completo_info,
+            "categorias": catalogo_con_pdfs,
+            "total_categorias": len(catalogo_con_pdfs),
+            "total_productos": sum(len(prods) for prods in catalogo.values() if prods),
+            "productos_disponibles": sum(
+                len(v.get("productos", [])) for v in catalogo_con_pdfs.values()
+            ),
+        }
+    except Exception as e:
+        raise HTTPException(
+            status_code=500, detail=f"Error al obtener productos disponibles: {str(e)}"
         )
 
 
