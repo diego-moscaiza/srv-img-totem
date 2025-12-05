@@ -36,8 +36,8 @@ def test_servidor():
         return False
 
 def obtener_catalogo_activo(segmento):
-    """Obtiene el catálogo activo de un segmento"""
-    url = f"{BASE_URL}/api/catalogo/{segmento}/activo"
+    """Obtiene el catálogo del mes actual de un segmento"""
+    url = f"{BASE_URL}/api/catalogo/{segmento}/mes-actual"
     response = requests.get(url)
     data = response.json()
     
@@ -117,7 +117,7 @@ def test_cambio_estado():
     print(f"  ID (BD): {producto_id}")
     print(f"  Código: {codigo_original}")
     print(f"  Estado actual: {estado_original}")
-    print(f"  Activo: {producto_test.get('activo')}")
+    print(f"  Mes actual: {producto_test.get('mes_actual')}")
     
     # 2. Cambiar estado a "no_disponible"
     print_section("2. Cambiando estado a 'no_disponible'")
@@ -142,7 +142,7 @@ def test_cambio_estado():
     if producto_en_catalogo:
         print(f"✓ Producto encontrado en catálogo")
         print(f"  Estado: {producto_en_catalogo.get('estado')}")
-        print(f"  Activo: {producto_en_catalogo.get('activo')}")
+        print(f"  Mes actual: {producto_en_catalogo.get('mes_actual')}")
         
         if producto_en_catalogo.get('estado') == 'no_disponible':
             print(f"✓ Estado actualizado correctamente a 'no_disponible'")
@@ -151,9 +151,9 @@ def test_cambio_estado():
             return False
             
         if producto_en_catalogo.get('activo') == False:
-            print(f"✓ Campo 'activo' correctamente en False")
+            print(f"Campo 'activo' correctamente en False")
         else:
-            print(f"✗ Campo 'activo' debería ser False pero es: {producto_en_catalogo.get('activo')}")
+            print(f"✗ Campo 'mes_actual' debería ser False pero es: {producto_en_catalogo.get('mes_actual')}")
     else:
         print(f"✗ Producto no encontrado en catálogo después del cambio")
         return False
@@ -180,12 +180,12 @@ def test_cambio_estado():
     if producto_final:
         print(f"✓ Producto encontrado en catálogo")
         print(f"  Estado: {producto_final.get('estado')}")
-        print(f"  Activo: {producto_final.get('activo')}")
+        print(f"  Mes actual: {producto_final.get('mes_actual')}")
         
         if producto_final.get('estado') == 'disponible' and producto_final.get('activo') == True:
-            print(f"✓ Estado y activo restaurados correctamente")
+            print(f"Estado y activo restaurados correctamente")
         else:
-            print(f"✗ Estado/activo no corresponden")
+            print(f"✗ Estado/mes_actual no corresponden")
             return False
     else:
         print(f"✗ Producto no encontrado después de restaurar estado")
@@ -195,7 +195,7 @@ def test_cambio_estado():
     print("✓ PRUEBA COMPLETADA EXITOSAMENTE")
     print("  - Cambios de estado se reflejan en tiempo real")
     print("  - Caché se invalida correctamente")
-    print("  - Campo 'activo' se calcula correctamente")
+    print("  - Campo 'mes_actual' se calcula correctamente")
     
     return True
 
