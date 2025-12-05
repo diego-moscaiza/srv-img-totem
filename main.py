@@ -5,14 +5,11 @@ import os
 import urllib.parse
 from pathlib import Path
 from typing import List, Dict
-from src.catalogos_manager import CatalogoManager
+from src.catalogos_manager import catalogo_manager as catalogo_mgr
 from src.database import Producto as DBProducto, SessionLocal, engine
 from src.database import Base
 from src.schemas import Producto, ProductoCreate, ProductoUpdate
 from src.config import SERVER_URL, IMAGENES_DIR
-
-# Crear instancia del gestor de catálogos
-catalogo_mgr = CatalogoManager()
 
 # Crear las tablas de la BD
 Base.metadata.create_all(bind=engine)
