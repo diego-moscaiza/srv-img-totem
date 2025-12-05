@@ -273,7 +273,7 @@ async def obtener_imagenes_disponibles(
         )
 
 
-@app.get("/api/catalogo/{segmento}/activo/{categoria}")
+@app.get("/api/catalogo/{segmento}/mes-actual/{categoria}")
 async def obtener_categoria_activa(segmento: str, categoria: str):
     """Obtiene productos de una categoría específica del catálogo activo"""
     try:
@@ -346,7 +346,7 @@ async def obtener_categoria_activa(segmento: str, categoria: str):
         )
 
 
-@app.get("/api/catalogo/{segmento}/activo")
+@app.get("/api/catalogo/{segmento}/mes-actual")
 async def obtener_catalogo_activo(segmento: str):
     """Obtiene el catálogo activo de un segmento con productos y PDFs"""
     try:
@@ -852,7 +852,7 @@ async def obtener_catalogo_completo(segmento: str, anio: str, mes: str):
         )
 
 
-@app.get("/api/catalogo-completo/{segmento}/activo")
+@app.get("/api/catalogo-completo/{segmento}/mes-actual")
 async def obtener_catalogo_completo_activo(segmento: str):
     """Obtiene el PDF del catálogo completo del mes activo"""
     try:
