@@ -1,42 +1,16 @@
 from sqlalchemy import create_engine, Column, Integer, String, Float, Boolean, JSON
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
-from pathlib import Path
-import os
 
 # Cargar .env si existe (para desarrollo local)
 try:
     from dotenv import load_dotenv
-
     load_dotenv()
 except ImportError:
     pass  # En Docker no necesita dotenv
 
-
-# Crear la conexión a SQLite
-# Detectar automáticamente el entorno: Docker vs Local
-def get_database_url():
-    """
-    Determina la URL de la base de datos según el entorno:
-    - Docker (producción): /srv/data/catalogos.db
-    - Local (desarrollo): ./catalogos.db en el directorio del proyecto
-    """
-    # Si hay variable de entorno definida, usarla (Docker)
-    env_url = os.getenv("DATABASE_URL")
-    if env_url:
-        return env_url
-
-    # Detectar si estamos en Docker (el directorio /srv existe)
-    if Path("/srv/data").exists():
-        return "sqlite:////srv/data/catalogos.db"
-
-    # Local: usar ruta relativa al proyecto
-    project_root = Path(__file__).parent.parent
-    db_path = project_root / "catalogos.db"
-    return f"sqlite:///{db_path}"
-
-
-DATABASE_URL = get_database_url()
+# Importar la configuración centralizada de BD
+from src.config import DATABASE_URL
 
 engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
@@ -62,7 +36,7 @@ class Producto(Base):
     segmento = Column(String(50), default="fnb", index=True)  # fnb, gaso, etc.
     estado = Column(
         String(50), default="disponible", index=True
-    )  # disponible, no disponible, agotado, etc.
+    )  # disponible, no_disponible, agotado
     stock = Column(Boolean, default=True)
 
 

@@ -42,6 +42,11 @@ class SegmentoCatalogo:
         self.imagenes_base = imagenes_base
         self.cache = {}
 
+    def invalidar_cache(self):
+        """Invalida todo el caché del segmento"""
+        self.cache.clear()
+        print(f"[CACHE] Invalidado para segmento: {self.nombre}")
+
     def cargar_catalogo_mes(self, año: str, mes: str) -> Dict:
         """Carga el catálogo de un mes específico desde la BD"""
         cache_key = f"{año}-{mes}"
@@ -59,6 +64,8 @@ class SegmentoCatalogo:
 
         try:
             db = SessionLocal()
+            # Forzar lectura fresca de la BD (sin caché)
+            db.expire_all()
 
             # Convertir número de mes a nombre si es necesario
             meses_map = {
@@ -104,6 +111,13 @@ class SegmentoCatalogo:
                 if categoria not in catalogo:
                     catalogo[categoria] = []
 
+                # Determinar si el producto está activo basado en estado y stock
+                es_disponible = producto.estado == "disponible" and producto.stock
+                es_mes_actual = (
+                    año == datetime.now().strftime("%Y")
+                    and mes_nombre == self._convertir_mes_actual()
+                )
+
                 producto_dict = {
                     "id": producto.codigo,
                     "codigo": producto.codigo,
@@ -114,13 +128,11 @@ class SegmentoCatalogo:
                     "imagen": producto.imagen_listado,
                     "imagen_caracteristicas": producto.imagen_caracteristicas,
                     "cuotas": producto.cuotas,
+                    "estado": producto.estado,  # disponible, no_disponible, agotado
                     "stock": producto.stock,
                     "mes_validez": f"{año}-{mes_nombre}",
                     "segmento": self.nombre,
-                    "activo": (
-                        año == datetime.now().strftime("%Y")
-                        and mes_nombre == self._convertir_mes_actual()
-                    ),
+                    "activo": es_disponible and es_mes_actual,
                 }
 
                 catalogo[categoria].append(producto_dict)
@@ -128,7 +140,7 @@ class SegmentoCatalogo:
             return catalogo
 
         except Exception as e:
-            print(f"❌ Error al cargar catálogo {self.nombre}: {e}")
+            print(f"[ERROR] No se pudo cargar catálogo {self.nombre}: {e}")
             return {}
 
     def validar_producto(self, producto_id: str, categoria: str) -> Dict:
@@ -305,7 +317,7 @@ class CatalogoManager:
 
     def __init__(
         self,
-        imagenes_base: str = None,
+        imagenes_base: str | None = None,
         segmentos: Optional[List[str]] = None,
     ):
         # Usar la función que detecta el entorno automáticamente
@@ -350,6 +362,16 @@ class CatalogoManager:
                 f"Segmento '{nombre_segmento}' no existe. Disponibles: {list(self.segmentos.keys())}"
             )
         return self.segmentos[nombre_segmento]
+
+    def invalidar_cache(self, segmento: str | None = None):
+        """Invalida el caché de un segmento o todos si no se especifica"""
+        if segmento:
+            if segmento in self.segmentos:
+                self.segmentos[segmento].invalidar_cache()
+        else:
+            for seg in self.segmentos.values():
+                seg.invalidar_cache()
+            print("[CACHE] Invalidado para TODOS los segmentos")
 
     def detectar_catalogo_actual(self, segmento: str = "fnb") -> Dict:
         """Detecta automáticamente el catálogo del mes actual para un segmento"""
@@ -413,7 +435,7 @@ class CatalogoManager:
             )
 
         except Exception as e:
-            print(f"❌ Error al obtener meses disponibles: {e}")
+            print(f"[ERROR] No se pudo obtener meses disponibles: {e}")
             return []
 
     def obtener_segmentos_disponibles(self) -> List[str]:

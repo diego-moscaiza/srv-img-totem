@@ -2,6 +2,7 @@ from fastapi import APIRouter, HTTPException, Depends
 from fastapi.responses import HTMLResponse
 from src.database import Producto as DBProducto, SessionLocal
 from src.schemas import Producto, ProductoCreate, ProductoUpdate
+from src.catalogos_manager import catalogo_manager
 from typing import List
 from pathlib import Path
 
@@ -65,6 +66,10 @@ async def crear_producto(producto: ProductoCreate, db=Depends(get_db)):
     db.add(db_producto)
     db.commit()
     db.refresh(db_producto)
+    
+    # Invalidar caché del catálogo
+    catalogo_manager.invalidar_cache(str(db_producto.segmento))
+    
     return db_producto
 
 
@@ -78,12 +83,31 @@ async def actualizar_producto(
         raise HTTPException(status_code=404, detail="Producto no encontrado")
 
     update_data = producto.dict(exclude_unset=True)
+    
+    # Sincronizar estado y stock automáticamente
+    if "estado" in update_data:
+        estado = update_data["estado"]
+        if estado == "agotado":
+            update_data["stock"] = False
+        elif estado == "disponible":
+            update_data["stock"] = True
+        # "no_disponible" no cambia stock, es para productos inactivos temporalmente
+    
+    if "stock" in update_data and "estado" not in update_data:
+        # Si solo se actualiza stock, sincronizar estado
+        if not update_data["stock"]:
+            update_data["estado"] = "agotado"
+    
     for key, value in update_data.items():
         setattr(db_producto, key, value)
 
     db.add(db_producto)
     db.commit()
     db.refresh(db_producto)
+    
+    # Invalidar caché del catálogo para que los cambios se reflejen en tiempo real
+    catalogo_manager.invalidar_cache(str(db_producto.segmento))
+    
     return db_producto
 
 
@@ -94,6 +118,11 @@ async def eliminar_producto(producto_id: int, db=Depends(get_db)):
     if not db_producto:
         raise HTTPException(status_code=404, detail="Producto no encontrado")
 
+    segmento = str(db_producto.segmento)  # Guardar antes de eliminar
     db.delete(db_producto)
     db.commit()
+    
+    # Invalidar caché del catálogo
+    catalogo_manager.invalidar_cache(segmento)
+    
     return {"mensaje": "Producto eliminado exitosamente"}

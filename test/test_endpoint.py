@@ -21,8 +21,8 @@ import json
 import os
 from typing import Dict, List, Any
 
-# Configuración
-BASE_URL = os.environ.get("SERVER_URL", "http://192.168.1.65:8000")
+# Configuración - usa la misma URL que el servidor
+BASE_URL = os.environ.get("SERVER_URL", "http://192.168.5.85:8000")
 
 
 def verificar_servidor_disponible(url: str, timeout: int = 5) -> bool:
@@ -199,7 +199,7 @@ if __name__ == "__main__":
     print(f"URL: {BASE_URL}")
 
     if not verificar_servidor_disponible(BASE_URL):
-        print("⚠️  El servidor NO está disponible en http://192.168.1.65:8000")
+        print(f"⚠️  El servidor NO está disponible en {BASE_URL}")
         print("\n📝 Para iniciar el servidor, abre otra terminal y ejecuta:")
         print("\n  EN WINDOWS:")
         print("   cd srv-img-totem")
