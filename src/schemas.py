@@ -1,5 +1,6 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, field_serializer
 from typing import Optional, Dict, Any
+import os
 
 
 class ProductoBase(BaseModel):
@@ -45,3 +46,22 @@ class Producto(ProductoBase):
 
     class Config:
         from_attributes = True
+
+    def construct_image_url(self, imagen_path: Optional[str]) -> Optional[str]:
+        """Construye URL absoluta para una imagen desde su ruta relativa"""
+        if not imagen_path:
+            return None
+        
+        # Si ya es una URL absoluta, devolverla tal cual
+        if imagen_path.startswith("http://") or imagen_path.startswith("https://"):
+            return imagen_path
+        
+        server_url = os.getenv("SERVER_URL", "http://localhost:8000").rstrip("/")
+        # Asegurar que la ruta no comience con /
+        imagen_path = imagen_path.lstrip("/")
+        return f"{server_url}/api/catalogos/{imagen_path}"
+
+    @field_serializer("imagen_listado", "imagen_caracteristicas", "imagen_caracteristicas_2")
+    def serialize_imagenes(self, valor: Optional[str], _info) -> Optional[str]:
+        """Serializa las rutas de imágenes como URLs absolutas"""
+        return self.construct_image_url(valor)
