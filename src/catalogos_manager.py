@@ -132,15 +132,21 @@ class SegmentoCatalogo:
                     # Normalizar backslashes a forward slashes
                     ruta_normalizada = ruta.replace("\\", "/")
 
-                    # Determinar la ruta relativa
-                    if ruta_normalizada.startswith("/api/catalogos/"):
+                    # Si es una URL absoluta, extraer solo la ruta relativa
+                    if ruta_normalizada.startswith("http://") or ruta_normalizada.startswith("https://"):
+                        # Extraer la ruta después de /api/catalogos/
+                        if "/api/catalogos/" in ruta_normalizada:
+                            ruta_relativa = "/api/catalogos/" + ruta_normalizada.split("/api/catalogos/")[1]
+                        else:
+                            # Si no tiene /api/catalogos/, devolverla tal cual
+                            return {"ruta": ruta_normalizada, "url": ruta_normalizada}
+                    # Si ya es una ruta relativa con /api/catalogos/, usarla directamente
+                    elif ruta_normalizada.startswith("/api/catalogos/"):
                         ruta_relativa = ruta_normalizada
+                    # Si empieza con catalogos/, agregar /api/
                     elif ruta_normalizada.startswith("catalogos/"):
                         ruta_relativa = "/api/" + ruta_normalizada
-                    elif ruta_normalizada.startswith(
-                        "http://"
-                    ) or ruta_normalizada.startswith("https://"):
-                        return {"ruta": ruta_normalizada, "url": ruta_normalizada}
+                    # Si no tiene prefijo, agregar /api/catalogos/
                     else:
                         ruta_relativa = "/api/catalogos/" + ruta_normalizada
 
