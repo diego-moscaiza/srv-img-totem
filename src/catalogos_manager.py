@@ -126,17 +126,22 @@ class SegmentoCatalogo:
                 def construir_url_imagen(ruta):
                     if not ruta or ruta.strip() == "":
                         return ""
+
                     # Si ya es una URL absoluta, devolverla tal cual
                     if ruta.startswith("http://") or ruta.startswith("https://"):
                         return ruta
+
                     # Si ya tiene el prefijo /api/catalogos/, devolverla tal cual
                     if ruta.startswith("/api/catalogos/"):
                         return ruta
-                    # Si empieza con catalogos/, agregar /api/
-                    if ruta.startswith("catalogos/"):
-                        return "/api/" + ruta
+
                     # Normalizar backslashes a forward slashes
                     ruta_normalizada = ruta.replace("\\", "/")
+
+                    # Si empieza con catalogos/, agregar /api/ al inicio
+                    if ruta_normalizada.startswith("catalogos/"):
+                        return "/api/" + ruta_normalizada
+
                     # Si no tiene prefijo, agregar /api/catalogos/
                     return "/api/catalogos/" + ruta_normalizada
 
