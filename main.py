@@ -280,6 +280,176 @@ async def obtener_imagenes_disponibles(
         )
 
 
+@app.get("/api/imagenes-base64")
+async def obtener_imagenes_base64(
+    segmento: str | None = None,
+    ano: int | None = None,
+    mes: str | None = None,
+    categoria: str | None = None,
+    tipo: str = "listado",  # "listado" o "caracteristicas"
+):
+    """
+    Obtiene imágenes en base64, opcionalmente filtradas por segmento, año, mes y categoría.
+    Parámetro 'tipo' puede ser 'listado' o 'caracteristicas' para especificar carpeta.
+    """
+    import base64
+    import mimetypes
+
+    try:
+        imagenes_base64 = {"imagenes": []}
+
+        imagenes_dir = Path(IMAGENES_DIR) / "catalogos"
+
+        if not imagenes_dir.exists():
+            return imagenes_base64
+
+        # Normalizar parámetros de entrada
+        segmento_filtro = (
+            segmento.strip().lower() if segmento and segmento.strip() else None
+        )
+        ano_filtro = int(ano) if ano else None
+        mes_filtro = mes.strip().lower() if mes and mes.strip() else None
+        categoria_filtro = (
+            categoria.strip().lower() if categoria and categoria.strip() else None
+        )
+        tipo_filtro = tipo.strip().lower()
+
+        FORMATOS_PERMITIDOS = {".png", ".jpg", ".jpeg", ".gif", ".webp"}
+
+        # Recorrer estructura: catalogos/segmento/año/mes/categoría/tipo_imagen
+        for segmento_dir in imagenes_dir.iterdir():
+            if not segmento_dir.is_dir():
+                continue
+
+            segmento_actual = segmento_dir.name.lower()
+
+            # Si se especifica segmento, filtrar exactamente
+            if segmento_filtro and segmento_actual != segmento_filtro:
+                continue
+
+            for ano_dir in segmento_dir.iterdir():
+                if not ano_dir.is_dir():
+                    continue
+
+                try:
+                    ano_actual = int(ano_dir.name)
+                except ValueError:
+                    continue
+
+                # Si se especifica año, filtrar exactamente
+                if ano_filtro and ano_actual != ano_filtro:
+                    continue
+
+                for mes_dir in ano_dir.iterdir():
+                    if not mes_dir.is_dir():
+                        continue
+
+                    mes_actual = mes_dir.name.lower()
+
+                    # Si se especifica mes, verificar que esté en el nombre de la carpeta
+                    if mes_filtro:
+                        mes_nombre = (
+                            "-".join(mes_actual.split("-")[1:])
+                            if "-" in mes_actual
+                            else mes_actual
+                        )
+                        if mes_nombre != mes_filtro:
+                            continue
+
+                    for categoria_dir in mes_dir.iterdir():
+                        if not categoria_dir.is_dir():
+                            continue
+
+                        categoria_actual = categoria_dir.name.lower()
+
+                        # Si se especifica categoría, filtrar exactamente
+                        if categoria_filtro and not categoria_actual.endswith(
+                            categoria_filtro
+                        ):
+                            continue
+
+                        # Buscar carpeta especificada (precios o caracteristicas)
+                        tipos_buscar = []
+                        if tipo_filtro == "listado":
+                            tipos_buscar = ["precios"]
+                        elif tipo_filtro == "caracteristicas":
+                            tipos_buscar = ["caracteristicas"]
+                        else:
+                            tipos_buscar = ["precios", "caracteristicas"]
+
+                        for tipo_dir in tipos_buscar:
+                            tipo_path = categoria_dir / tipo_dir
+                            if not tipo_path.exists():
+                                continue
+
+                            # Buscar todas las extensiones de imagen soportadas
+                            imagenes_encontradas = set(
+                                list(tipo_path.glob("*.png"))
+                                + list(tipo_path.glob("*.jpg"))
+                                + list(tipo_path.glob("*.jpeg"))
+                                + list(tipo_path.glob("*.gif"))
+                                + list(tipo_path.glob("*.webp"))
+                            )
+
+                            for img in sorted(imagenes_encontradas):
+                                try:
+                                    ruta_relativa = img.relative_to(imagenes_dir)
+                                    ruta_relativa_str = str(ruta_relativa).replace(
+                                        "\\", "/"
+                                    )
+
+                                    # Leer imagen y convertir a base64
+                                    with open(img, "rb") as f:
+                                        contenido_base64 = base64.b64encode(
+                                            f.read()
+                                        ).decode("utf-8")
+
+                                    mime_type = (
+                                        mimetypes.guess_type(img)[0] or "image/*"
+                                    )
+                                    tamaño_bytes = img.stat().st_size
+                                    tamaño_kb = round(tamaño_bytes / 1024, 2)
+
+                                    imagenes_base64["imagenes"].append(
+                                        {
+                                            "nombre": img.name,
+                                            "ruta": ruta_relativa_str,
+                                            "url": f"{SERVER_URL_EXTERNAL}/api/catalogos/{ruta_relativa_str}",
+                                            "url_base64_endpoint": f"/api/imagen-base64/{ruta_relativa_str}",
+                                            "segmento": segmento_dir.name,
+                                            "año": ano_dir.name,
+                                            "mes": mes_dir.name,
+                                            "categoria": categoria_dir.name,
+                                            "tipo": tipo_dir,
+                                            "base64": contenido_base64,
+                                            "mime_type": mime_type,
+                                            "tamaño_bytes": tamaño_bytes,
+                                            "tamaño_kb": tamaño_kb,
+                                        }
+                                    )
+                                except Exception as img_error:
+                                    print(
+                                        f"[WARN] Error procesando imagen {img.name}: {str(img_error)}"
+                                    )
+                                    continue
+
+        return {
+            "total_imagenes": len(imagenes_base64["imagenes"]),
+            "filtros_aplicados": {
+                "segmento": segmento_filtro,
+                "año": ano_filtro,
+                "mes": mes_filtro,
+                "categoria": categoria_filtro,
+                "tipo": tipo_filtro,
+            },
+            **imagenes_base64,
+        }
+    except Exception as e:
+        raise HTTPException(
+            status_code=500, detail=f"Error al obtener imágenes en base64: {str(e)}"
+        )
+
+
 @app.get("/api/catalogo/{segmento}/mes-actual/disponibles")
 async def obtener_productos_disponibles_mes_actual(segmento: str):
     """Obtiene SOLO los productos disponibles del mes actual (filtra por estado='disponible')"""
@@ -1209,6 +1379,86 @@ async def obtener_pdf_base64(ruta: str, force: bool = False):
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error al obtener PDF: {str(e)}")
+
+
+@app.get("/api/imagen-base64/{ruta:path}")
+async def obtener_imagen_base64(ruta: str, force: bool = False):
+    """
+    Devuelve una imagen en formato base64 para uso en n8n/WhatsApp.
+    Por defecto solo permite archivos menores a 5MB.
+    Use ?force=true para forzar la conversión de archivos más grandes (máx 50MB).
+    Soporta formatos: PNG, JPG, JPEG, GIF, WEBP
+    """
+    import base64
+    import mimetypes
+
+    MAX_SIZE_DEFAULT = 5 * 1024 * 1024  # 5 MB
+    MAX_SIZE_FORCED = 50 * 1024 * 1024  # 50 MB
+    FORMATOS_PERMITIDOS = {".png", ".jpg", ".jpeg", ".gif", ".webp"}
+
+    try:
+        ruta_decodificada = urllib.parse.unquote(ruta)
+        ruta_imagen = Path(IMAGENES_DIR) / "catalogos" / ruta_decodificada
+
+        if not ruta_imagen.exists():
+            raise HTTPException(
+                status_code=404, detail=f"Imagen no encontrada: {ruta_decodificada}"
+            )
+
+        if (
+            not ruta_imagen.is_file()
+            or ruta_imagen.suffix.lower() not in FORMATOS_PERMITIDOS
+        ):
+            raise HTTPException(
+                status_code=400,
+                detail=f"Ruta inválida o formato no soportado. Permitidos: {', '.join(FORMATOS_PERMITIDOS)}",
+            )
+
+        tamaño_bytes = ruta_imagen.stat().st_size
+        tamaño_mb = round(tamaño_bytes / (1024 * 1024), 2)
+
+        # Verificar límites de tamaño
+        max_size = MAX_SIZE_FORCED if force else MAX_SIZE_DEFAULT
+        if tamaño_bytes > max_size:
+            return {
+                "success": False,
+                "error": f"Archivo demasiado grande ({tamaño_mb} MB). Límite: {max_size // (1024*1024)} MB",
+                "archivo": {
+                    "nombre": ruta_imagen.name,
+                    "tamaño_bytes": tamaño_bytes,
+                    "tamaño_mb": tamaño_mb,
+                    "formato": ruta_imagen.suffix.lower(),
+                    "mime_type": mimetypes.guess_type(ruta_imagen)[0] or "image/*",
+                },
+                "sugerencia": "Use ?force=true para forzar (máx 50MB) o descargue directamente desde url_relativa",
+                "url_descarga_directa": f"/api/catalogos/{ruta}",
+            }
+
+        # Obtener mime type
+        mime_type = mimetypes.guess_type(ruta_imagen)[0] or "image/*"
+
+        # Leer y codificar en base64
+        with open(ruta_imagen, "rb") as f:
+            contenido_base64 = base64.b64encode(f.read()).decode("utf-8")
+
+        return {
+            "success": True,
+            "archivo": {
+                "nombre": ruta_imagen.name,
+                "tamaño_bytes": tamaño_bytes,
+                "tamaño_mb": tamaño_mb,
+                "formato": ruta_imagen.suffix.lower(),
+                "mime_type": mime_type,
+            },
+            "base64": contenido_base64,
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=500, detail=f"Error al obtener imagen: {str(e)}"
+        )
 
 
 @app.get("/api/ver-pdf/{ruta:path}")
