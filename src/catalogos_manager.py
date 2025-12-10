@@ -122,6 +122,24 @@ class SegmentoCatalogo:
                     and mes_nombre == self._convertir_mes_actual()
                 )
 
+                # Función auxiliar para construir URLs correctas de imágenes
+                def construir_url_imagen(ruta):
+                    if not ruta or ruta.strip() == "":
+                        return ""
+                    # Si ya es una URL absoluta, devolverla tal cual
+                    if ruta.startswith("http://") or ruta.startswith("https://"):
+                        return ruta
+                    # Si ya tiene el prefijo /api/catalogos/, devolverla tal cual
+                    if ruta.startswith("/api/catalogos/"):
+                        return ruta
+                    # Si empieza con catalogos/, agregar /api/
+                    if ruta.startswith("catalogos/"):
+                        return "/api/" + ruta
+                    # Normalizar backslashes a forward slashes
+                    ruta_normalizada = ruta.replace("\\", "/")
+                    # Si no tiene prefijo, agregar /api/catalogos/
+                    return "/api/catalogos/" + ruta_normalizada
+
                 producto_dict = {
                     "id": producto.codigo,
                     "codigo": producto.codigo,
@@ -129,10 +147,12 @@ class SegmentoCatalogo:
                     "descripcion": producto.descripcion,
                     "precio": producto.precio,
                     "categoria": categoria,
-                    "imagen": producto.imagen_listado,
-                    "imagen_caracteristicas": producto.imagen_caracteristicas,
+                    "imagen": construir_url_imagen(producto.imagen_listado),
+                    "imagen_caracteristicas": construir_url_imagen(
+                        producto.imagen_caracteristicas
+                    ),
                     "cuotas": producto.cuotas,
-                    "estado": producto.estado,  # disponible, no_disponible, agotado
+                    "estado": producto.estado,  # disponible, no disponible, agotado
                     "stock": producto.stock,
                     "mes_validez": f"{año}-{mes_nombre}",
                     "segmento": self.nombre,
