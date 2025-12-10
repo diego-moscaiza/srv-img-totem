@@ -74,8 +74,13 @@ async def root():
             "endpoints": {
                 "catalogos": {
                     "activo": "/api/catalogo/{segmento}/activo",
+                    "activo_disponibles": "/api/catalogo/{segmento}/mes-actual/disponibles",
+                    "activo_categoria": "/api/catalogo/{segmento}/mes-actual/{categoria}",
+                    "activo_categoria_disponibles": "/api/catalogo/{segmento}/mes-actual/{categoria}/disponibles",
                     "por_mes": "/api/catalogo/{segmento}/{año}/{mes}",
+                    "por_mes_disponibles": "/api/catalogo/{segmento}/{año}/{mes}/disponibles",
                     "categoria": "/api/catalogo/{segmento}/{año}/{mes}/{categoria}",
+                    "categoria_disponibles": "/api/catalogo/{segmento}/{año}/{mes}/{categoria}/disponibles",
                     "producto": "/api/catalogo/{segmento}/{año}/{mes}/{categoria}/{producto_id}",
                 },
                 "recursos": {
@@ -128,10 +133,10 @@ async def obtener_segmentos():
 
 @app.get("/api/imagenes-disponibles")
 async def obtener_imagenes_disponibles(
-    segmento: str | None = None, 
-    ano: int | None = None, 
-    mes: str | None = None, 
-    categoria: str | None = None
+    segmento: str | None = None,
+    ano: int | None = None,
+    mes: str | None = None,
+    categoria: str | None = None,
 ):
     """Obtiene lista de imágenes disponibles, opcionalmente filtradas por segmento, año, mes y categoría"""
     try:
@@ -143,7 +148,9 @@ async def obtener_imagenes_disponibles(
             return imagenes_disponibles
 
         # Normalizar parámetros de entrada
-        segmento_filtro = segmento.strip().lower() if segmento and segmento.strip() else None
+        segmento_filtro = (
+            segmento.strip().lower() if segmento and segmento.strip() else None
+        )
         ano_filtro = int(ano) if ano else None
         mes_filtro = mes.strip().lower() if mes and mes.strip() else None
         categoria_filtro = (
@@ -199,7 +206,9 @@ async def obtener_imagenes_disponibles(
                         categoria_actual = categoria_dir.name.lower()
 
                         # Si se especifica categoría, filtrar exactamente
-                        if categoria_filtro and not categoria_actual.endswith(categoria_filtro):
+                        if categoria_filtro and not categoria_actual.endswith(
+                            categoria_filtro
+                        ):
                             continue
 
                         # Buscar carpeta "precios" (listado)
@@ -273,7 +282,6 @@ async def obtener_imagenes_disponibles(
         )
 
 
-
 @app.get("/api/catalogo/{segmento}/mes-actual/disponibles")
 async def obtener_productos_disponibles_mes_actual(segmento: str):
     """Obtiene SOLO los productos disponibles del mes actual (filtra por estado='disponible')"""
@@ -287,8 +295,10 @@ async def obtener_productos_disponibles_mes_actual(segmento: str):
         catalogo_con_pdfs = {}
         for categoria_nombre, productos in catalogo.items():
             # Filtrar solo productos con estado='disponible'
-            productos_disponibles = [p for p in productos if p.get("estado") == "disponible"]
-            
+            productos_disponibles = [
+                p for p in productos if p.get("estado") == "disponible"
+            ]
+
             if not productos_disponibles:
                 continue  # Saltar categoría si no tiene productos disponibles
 
@@ -437,6 +447,83 @@ async def obtener_categoria_activa(segmento: str, categoria: str):
         )
 
 
+@app.get("/api/catalogo/{segmento}/mes-actual/{categoria}/disponibles")
+async def obtener_categoria_disponibles_mes_actual(segmento: str, categoria: str):
+    """Obtiene SOLO los productos disponibles de una categoría específica del mes actual"""
+    try:
+        catalogo_info = catalogo_mgr.detectar_catalogo_actual(segmento)
+        anio = catalogo_info["año"]
+        mes = catalogo_info["mes"]
+        catalogo = catalogo_mgr.cargar_catalogo_mes(anio, mes, segmento)
+
+        # Buscar la categoría usando el mapa específico del segmento
+        categoria_encontrada = None
+        categoria_carpeta = None
+        segmento_obj = catalogo_mgr.obtener_segmento(segmento)
+        for cat_key, cat_nombre in segmento_obj.categoria_map.items():
+            if (
+                cat_nombre.lower() == categoria.lower()
+                or cat_key.lower() == categoria.lower()
+                or categoria.lower() in cat_key.lower()
+            ):
+                categoria_encontrada = cat_nombre
+                categoria_carpeta = cat_key
+                break
+
+        if not categoria_encontrada or categoria_encontrada not in catalogo:
+            raise HTTPException(
+                status_code=404, detail=f"Categoría '{categoria}' no encontrada"
+            )
+
+        # Filtrar solo productos disponibles
+        productos = catalogo[categoria_encontrada]
+        productos_disponibles = [
+            p for p in productos if p.get("estado") == "disponible"
+        ]
+
+        # Obtener PDF de la categoría
+        pdf_info = None
+        ruta_pdf = catalogo_mgr.obtener_pdf_categoria(
+            anio, mes, categoria_carpeta or categoria, segmento
+        )
+
+        if ruta_pdf and ruta_pdf.exists():
+            ruta_relativa = ruta_pdf.relative_to(Path(IMAGENES_DIR) / "catalogos")
+            ruta_relativa_str = str(ruta_relativa).replace("\\", "/")
+            url_relativa_pdf = f"/api/ver-pdf/{ruta_relativa_str}"
+            url_base64_pdf = f"/api/pdf-base64/{ruta_relativa_str}"
+            pdf_info = {
+                "nombre": ruta_pdf.name,
+                "url": f"{SERVER_URL}{url_relativa_pdf}",
+                "url_relativa": url_relativa_pdf,
+                "url_base64": url_base64_pdf,
+                "tamaño_mb": round(ruta_pdf.stat().st_size / (1024 * 1024), 2),
+            }
+        else:
+            pdf_info = {
+                "nombre": None,
+                "url": None,
+                "url_relativa": None,
+                "url_base64": None,
+                "mensaje": f"No hay PDF disponible para {categoria_encontrada}",
+            }
+
+        return {
+            "segmento": segmento,
+            "catalogo_info": catalogo_info,
+            "categoria": categoria_encontrada,
+            "total_productos": len(productos_disponibles),
+            "pdf": pdf_info,
+            "productos": productos_disponibles,
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=500, detail=f"Error al obtener categoría disponible: {str(e)}"
+        )
+
+
 @app.get("/api/catalogo/{segmento}/mes-actual")
 async def obtener_catalogo_activo(segmento: str):
     """Obtiene el catálogo activo de un segmento con productos y PDFs"""
@@ -534,8 +621,10 @@ async def obtener_productos_disponibles(segmento: str):
         catalogo_con_pdfs = {}
         for categoria_nombre, productos in catalogo.items():
             # Filtrar solo productos con estado='disponible'
-            productos_disponibles = [p for p in productos if p.get("estado") == "disponible"]
-            
+            productos_disponibles = [
+                p for p in productos if p.get("estado") == "disponible"
+            ]
+
             if not productos_disponibles:
                 continue  # Saltar categoría si no tiene productos disponibles
 
@@ -610,6 +699,69 @@ async def obtener_productos_disponibles(segmento: str):
         raise HTTPException(
             status_code=500, detail=f"Error al obtener productos disponibles: {str(e)}"
         )
+
+
+@app.get("/api/catalogo/{segmento}/{anio}/{mes}/disponibles")
+async def obtener_catalogo_disponibles_mes(segmento: str, anio: str, mes: str):
+    """Obtiene catálogo de un mes específico mostrando SOLO los productos disponibles por categoría"""
+    try:
+        catalogo = catalogo_mgr.cargar_catalogo_mes(anio, mes, segmento)
+
+        # Construir catálogo con PDFs incluidos por cada categoría (solo disponibles)
+        catalogo_con_pdfs = {}
+        for categoria_nombre, productos in catalogo.items():
+            # Filtrar solo productos disponibles
+            productos_disponibles = [
+                p for p in productos if p.get("estado") == "disponible"
+            ]
+
+            if not productos_disponibles:
+                continue  # Saltar categoría si no tiene productos disponibles
+
+            # Buscar la carpeta correspondiente a esta categoría
+            categoria_carpeta = None
+            for cat_key, cat_nom in catalogo_mgr.categoria_map.items():
+                if cat_nom == categoria_nombre:
+                    categoria_carpeta = cat_key
+                    break
+
+            # Obtener PDF de la categoría
+            pdf_info = None
+            if categoria_carpeta:
+                ruta_pdf = catalogo_mgr.obtener_pdf_categoria(
+                    anio, mes, categoria_carpeta, segmento
+                )
+                if ruta_pdf and ruta_pdf.exists():
+                    ruta_relativa = ruta_pdf.relative_to(
+                        Path(IMAGENES_DIR) / "catalogos"
+                    )
+                    ruta_relativa_str = str(ruta_relativa).replace("\\", "/")
+                    url_relativa_pdf = f"/api/ver-pdf/{ruta_relativa_str}"
+                    pdf_info = {
+                        "nombre": ruta_pdf.name,
+                        "url": f"{SERVER_URL}{url_relativa_pdf}",
+                        "url_relativa": url_relativa_pdf,
+                        "tamaño_mb": round(ruta_pdf.stat().st_size / (1024 * 1024), 2),
+                    }
+
+            catalogo_con_pdfs[categoria_nombre] = {
+                "pdf": pdf_info,
+                "total_productos": len(productos_disponibles),
+                "productos": productos_disponibles,
+            }
+
+        return {
+            "segmento": segmento,
+            "año": anio,
+            "mes": mes,
+            "categorias": catalogo_con_pdfs,
+            "total_categorias": len(catalogo_con_pdfs),
+            "total_productos": sum(
+                len(prods["productos"]) for prods in catalogo_con_pdfs.values()
+            ),
+        }
+    except Exception as e:
+        raise HTTPException(status_code=404, detail=f"Catálogo no encontrado: {str(e)}")
 
 
 @app.get("/api/catalogo/{segmento}/{anio}/{mes}")
@@ -746,6 +898,79 @@ async def obtener_categorias_mes(segmento: str, anio: str, mes: str, categoria: 
     except Exception as e:
         raise HTTPException(
             status_code=404, detail=f"Error al obtener categoría: {str(e)}"
+        )
+
+
+@app.get("/api/catalogo/{segmento}/{anio}/{mes}/{categoria}/disponibles")
+async def obtener_categorias_disponibles_mes(
+    segmento: str, anio: str, mes: str, categoria: str
+):
+    """Obtiene SOLO los productos disponibles de una categoría específica en un mes dado"""
+    try:
+        catalogo = catalogo_mgr.cargar_catalogo_mes(anio, mes, segmento)
+
+        # Buscar la categoría
+        categoria_encontrada = None
+        categoria_carpeta = None
+        for cat_key, cat_nombre in catalogo_mgr.categoria_map.items():
+            if (
+                cat_nombre.lower() == categoria.lower()
+                or cat_key.lower() == categoria.lower()
+            ):
+                categoria_encontrada = cat_nombre
+                categoria_carpeta = cat_key
+                break
+
+        if not categoria_encontrada or categoria_encontrada not in catalogo:
+            raise HTTPException(
+                status_code=404, detail=f"Categoría '{categoria}' no encontrada"
+            )
+
+        # Filtrar solo productos disponibles
+        productos = catalogo[categoria_encontrada]
+        productos_disponibles = [
+            p for p in productos if p.get("estado") == "disponible"
+        ]
+
+        # Obtener PDF de la categoría
+        pdf_info = None
+        ruta_pdf = catalogo_mgr.obtener_pdf_categoria(
+            anio, mes, categoria_carpeta or categoria, segmento
+        )
+
+        if ruta_pdf and ruta_pdf.exists():
+            # Construir ruta relativa para la URL
+            ruta_relativa = ruta_pdf.relative_to(Path(IMAGENES_DIR) / "catalogos")
+            ruta_relativa_str = str(ruta_relativa).replace("\\", "/")
+            url_relativa_pdf = f"/api/ver-pdf/{ruta_relativa_str}"
+            pdf_info = {
+                "nombre": ruta_pdf.name,
+                "url": f"{SERVER_URL}{url_relativa_pdf}",
+                "url_relativa": url_relativa_pdf,
+                "tamaño_mb": round(ruta_pdf.stat().st_size / (1024 * 1024), 2),
+            }
+        else:
+            pdf_info = {
+                "nombre": None,
+                "url": None,
+                "url_relativa": None,
+                "mensaje": f"No hay PDF disponible para {categoria_encontrada}",
+            }
+
+        return {
+            "segmento": segmento,
+            "anio": anio,
+            "mes": mes,
+            "categoria": categoria_encontrada,
+            "total_productos": len(productos_disponibles),
+            "pdf": pdf_info,
+            "productos": productos_disponibles,
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=404, detail=f"Error al obtener categoría disponible: {str(e)}"
         )
 
 
