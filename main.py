@@ -9,9 +9,9 @@ from src.catalogos_manager import catalogo_manager as catalogo_mgr
 from src.database import Producto as DBProducto, SessionLocal, engine
 from src.database import Base
 from src.schemas import Producto, ProductoCreate, ProductoUpdate
-from src.config import SERVER_URL, SERVER_URL_EXTERNAL, IMAGENES_DIR
+from src.config import SERVER_URL, IMAGENES_DIR
 
-print(f"[DEBUG] SERVER_URL_EXTERNAL={SERVER_URL_EXTERNAL}")
+print(f"[DEBUG] SERVER_URL={SERVER_URL}")
 
 # Crear las tablas de la BD
 Base.metadata.create_all(bind=engine)
@@ -231,7 +231,7 @@ async def obtener_imagenes_disponibles(
                                     "\\", "/"
                                 )
                                 # Construir URL completa
-                                url_completa = f"{SERVER_URL_EXTERNAL}/api/catalogos/{ruta_relativa_str}"
+                                url_completa = f"{SERVER_URL}/api/catalogos/{ruta_relativa_str}"
                                 key = f"{segmento_dir.name}/{ano_dir.name}/{mes_dir.name}/{categoria_dir.name}"
                                 if key not in imagenes_disponibles["listado"]:
                                     imagenes_disponibles["listado"][key] = []
@@ -261,7 +261,7 @@ async def obtener_imagenes_disponibles(
                                     "\\", "/"
                                 )
                                 # Construir URL completa
-                                url_completa = f"{SERVER_URL_EXTERNAL}/api/catalogos/{ruta_relativa_str}"
+                                url_completa = f"{SERVER_URL}/api/catalogos/{ruta_relativa_str}"
                                 key = f"{segmento_dir.name}/{ano_dir.name}/{mes_dir.name}/{categoria_dir.name}"
                                 if key not in imagenes_disponibles["caracteristicas"]:
                                     imagenes_disponibles["caracteristicas"][key] = []
@@ -413,9 +413,9 @@ async def obtener_imagenes_base64(
                                     imagenes_base64["imagenes"].append(
                                         {
                                             "nombre": img.name,
-                                            "ruta": ruta_relativa_str,
-                                            "url": f"{SERVER_URL_EXTERNAL}/api/catalogos/{ruta_relativa_str}",
-                                            "url_base64_endpoint": f"/api/imagen-base64/{ruta_relativa_str}",
+                                            "url": f"{SERVER_URL}/api/catalogos/{ruta_relativa_str}",
+                                            "url_relativa": ruta_relativa_str,
+                                            "url_base64": f"/api/imagen-base64/{ruta_relativa_str}",
                                             "segmento": segmento_dir.name,
                                             "año": ano_dir.name,
                                             "mes": mes_dir.name,
@@ -492,7 +492,7 @@ async def obtener_productos_disponibles_mes_actual(segmento: str):
                     url_base64_pdf = f"/api/pdf-base64/{ruta_relativa_str}"
                     pdf_info = {
                         "nombre": ruta_pdf.name,
-                        "url": f"{SERVER_URL_EXTERNAL}{url_relativa_pdf}",
+                        "url": f"{SERVER_URL}{url_relativa_pdf}",
                         "url_relativa": url_relativa_pdf,
                         "url_base64": url_base64_pdf,
                         "tamaño_mb": round(ruta_pdf.stat().st_size / (1024 * 1024), 2),
@@ -519,7 +519,7 @@ async def obtener_productos_disponibles_mes_actual(segmento: str):
             )
             catalogo_completo_info = {
                 "nombre": catalogo_completo_pdf.name,
-                "url": f"{SERVER_URL_EXTERNAL}{url_relativa_completo}",
+                "url": f"{SERVER_URL}{url_relativa_completo}",
                 "url_base64": url_base64_completo,
                 "tamaño_mb": round(
                     catalogo_completo_pdf.stat().st_size / (1024 * 1024), 2
@@ -585,7 +585,7 @@ async def obtener_categoria_activa(segmento: str, categoria: str):
             url_base64_pdf = f"/api/pdf-base64/{ruta_relativa_str}"
             pdf_info = {
                 "nombre": ruta_pdf.name,
-                "url": f"{SERVER_URL_EXTERNAL}{url_relativa_pdf}",
+                "url": f"{SERVER_URL}{url_relativa_pdf}",
                 "url_relativa": url_relativa_pdf,
                 "url_base64": url_base64_pdf,
                 "tamaño_mb": round(ruta_pdf.stat().st_size / (1024 * 1024), 2),
@@ -662,7 +662,7 @@ async def obtener_categoria_disponibles_mes_actual(segmento: str, categoria: str
             url_base64_pdf = f"/api/pdf-base64/{ruta_relativa_str}"
             pdf_info = {
                 "nombre": ruta_pdf.name,
-                "url": f"{SERVER_URL_EXTERNAL}{url_relativa_pdf}",
+                "url": f"{SERVER_URL}{url_relativa_pdf}",
                 "url_relativa": url_relativa_pdf,
                 "url_base64": url_base64_pdf,
                 "tamaño_mb": round(ruta_pdf.stat().st_size / (1024 * 1024), 2),
@@ -726,7 +726,7 @@ async def obtener_catalogo_activo(segmento: str):
                     url_base64_pdf = f"/api/pdf-base64/{ruta_relativa_str}"
                     pdf_info = {
                         "nombre": ruta_pdf.name,
-                        "url": f"{SERVER_URL_EXTERNAL}{url_relativa_pdf}",
+                        "url": f"{SERVER_URL}{url_relativa_pdf}",
                         "url_relativa": url_relativa_pdf,
                         "url_base64": url_base64_pdf,
                         "tamaño_mb": round(ruta_pdf.stat().st_size / (1024 * 1024), 2),
@@ -754,7 +754,7 @@ async def obtener_catalogo_activo(segmento: str):
             )
             catalogo_completo_info = {
                 "nombre": catalogo_completo_pdf.name,
-                "url": f"{SERVER_URL_EXTERNAL}{url_relativa_completo}",
+                "url": f"{SERVER_URL}{url_relativa_completo}",
                 "url_relativa": url_relativa_completo,
                 "url_base64": url_base64_completo,
                 "tamaño_mb": round(
@@ -818,7 +818,7 @@ async def obtener_productos_disponibles(segmento: str):
                     url_base64_pdf = f"/api/pdf-base64/{ruta_relativa_str}"
                     pdf_info = {
                         "nombre": ruta_pdf.name,
-                        "url": f"{SERVER_URL_EXTERNAL}{url_relativa_pdf}",
+                        "url": f"{SERVER_URL}{url_relativa_pdf}",
                         "url_relativa": url_relativa_pdf,
                         "url_base64": url_base64_pdf,
                         "tamaño_mb": round(ruta_pdf.stat().st_size / (1024 * 1024), 2),
@@ -845,7 +845,7 @@ async def obtener_productos_disponibles(segmento: str):
             )
             catalogo_completo_info = {
                 "nombre": catalogo_completo_pdf.name,
-                "url": f"{SERVER_URL_EXTERNAL}{url_relativa_completo}",
+                "url": f"{SERVER_URL}{url_relativa_completo}",
                 "url_base64": url_base64_completo,
                 "tamaño_mb": round(
                     catalogo_completo_pdf.stat().st_size / (1024 * 1024), 2
@@ -907,7 +907,7 @@ async def obtener_catalogo_disponibles_mes(segmento: str, anio: str, mes: str):
                     url_relativa_pdf = f"/api/ver-pdf/{ruta_relativa_str}"
                     pdf_info = {
                         "nombre": ruta_pdf.name,
-                        "url": f"{SERVER_URL_EXTERNAL}{url_relativa_pdf}",
+                        "url": f"{SERVER_URL}{url_relativa_pdf}",
                         "url_relativa": url_relativa_pdf,
                         "tamaño_mb": round(ruta_pdf.stat().st_size / (1024 * 1024), 2),
                     }
@@ -962,7 +962,7 @@ async def obtener_catalogo_mes(segmento: str, anio: str, mes: str):
                     url_relativa_pdf = f"/api/ver-pdf/{ruta_relativa_str}"
                     pdf_info = {
                         "nombre": ruta_pdf.name,
-                        "url": f"{SERVER_URL_EXTERNAL}{url_relativa_pdf}",
+                        "url": f"{SERVER_URL}{url_relativa_pdf}",
                         "url_relativa": url_relativa_pdf,
                         "tamaño_mb": round(ruta_pdf.stat().st_size / (1024 * 1024), 2),
                     }
@@ -982,7 +982,7 @@ async def obtener_catalogo_mes(segmento: str, anio: str, mes: str):
             url_relativa_completo = f"/api/catalogo-completo/{segmento}/{anio}/{mes}"
             catalogo_completo_info = {
                 "nombre": catalogo_completo_pdf.name,
-                "url": f"{SERVER_URL_EXTERNAL}{url_relativa_completo}",
+                "url": f"{SERVER_URL}{url_relativa_completo}",
                 "url_relativa": url_relativa_completo,
                 "tamaño_mb": round(
                     catalogo_completo_pdf.stat().st_size / (1024 * 1024), 2
@@ -1040,7 +1040,7 @@ async def obtener_categorias_mes(segmento: str, anio: str, mes: str, categoria: 
             url_relativa_pdf = f"/api/ver-pdf/{ruta_relativa_str}"
             pdf_info = {
                 "nombre": ruta_pdf.name,
-                "url": f"{SERVER_URL_EXTERNAL}{url_relativa_pdf}",
+                "url": f"{SERVER_URL}{url_relativa_pdf}",
                 "url_relativa": url_relativa_pdf,
                 "tamaño_mb": round(ruta_pdf.stat().st_size / (1024 * 1024), 2),
             }
@@ -1113,7 +1113,7 @@ async def obtener_categorias_disponibles_mes(
             url_relativa_pdf = f"/api/ver-pdf/{ruta_relativa_str}"
             pdf_info = {
                 "nombre": ruta_pdf.name,
-                "url": f"{SERVER_URL_EXTERNAL}{url_relativa_pdf}",
+                "url": f"{SERVER_URL}{url_relativa_pdf}",
                 "url_relativa": url_relativa_pdf,
                 "tamaño_mb": round(ruta_pdf.stat().st_size / (1024 * 1024), 2),
             }

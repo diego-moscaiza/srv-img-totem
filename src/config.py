@@ -9,15 +9,7 @@ load_dotenv()
 # SERVER_URL: Para acceso interno dentro de Docker
 SERVER_URL = os.getenv("SERVER_URL", "http://localhost:8000")
 
-# SERVER_URL_EXTERNAL: Para URLs que van a servicios externos (WhatsApp, etc)
-# Si no está definida, usar SERVER_URL como fallback
-SERVER_URL_EXTERNAL = os.getenv("SERVER_URL_EXTERNAL", SERVER_URL)
-
-# Legacy: DOMAIN_DOCKER
-DOMAIN_DOCKER = os.getenv("DOMAIN_DOCKER", "http://srv-img:8000")
-
 IMAGENES_DIR = os.getenv("IMAGENES_DIR", "imagenes")
-
 
 # Configuración de Base de Datos
 # Prioridad:
@@ -50,14 +42,12 @@ DATABASE_URL = get_database_url()
 # Información de configuración
 CONFIG_INFO = {
     "server_url": SERVER_URL,
-    "server_url_external": SERVER_URL_EXTERNAL,
     "imagenes_dir": IMAGENES_DIR,
     "database_url": DATABASE_URL,
 }
 
 print(f"[OK] Configuracion cargada desde .env")
 print(f"  - SERVER_URL: {SERVER_URL}")
-print(f"  - SERVER_URL_EXTERNAL: {SERVER_URL_EXTERNAL}")
 
 
 def get_image_url(ruta_relativa: str, use_external: bool = True) -> str:
@@ -66,13 +56,13 @@ def get_image_url(ruta_relativa: str, use_external: bool = True) -> str:
     
     Args:
         ruta_relativa: Ruta relativa de la imagen (ej: /api/catalogos/fnb/...)
-        use_external: Si True, usa SERVER_URL_EXTERNAL (para URLs que van a externos)
+        use_external: Si True, usa SERVER_URL (para URLs que van a externos)
                      Si False, usa SERVER_URL (para URLs internas)
     
     Returns:
         URL completa de la imagen
     """
-    base_url = SERVER_URL_EXTERNAL if use_external else SERVER_URL
+    base_url = SERVER_URL if use_external else SERVER_URL
     # Asegurar que no hay doble slash
     if ruta_relativa.startswith('/'):
         return f"{base_url}{ruta_relativa}"
