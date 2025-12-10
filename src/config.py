@@ -7,7 +7,9 @@ load_dotenv()
 
 # Configuración del servidor
 SERVER_URL = os.getenv("SERVER_URL", "http://localhost:8000")
+DOMAIN_DOCKER = os.getenv("DOMAIN_DOCKER", "http://srv-img:8000")
 IMAGENES_DIR = os.getenv("IMAGENES_DIR", "imagenes")
+
 
 # Configuración de Base de Datos
 # Prioridad:
@@ -33,6 +35,7 @@ def get_database_url():
     project_root = Path(__file__).parent.parent
     db_path = project_root / "catalogos.db"
     return f"sqlite:///{db_path}"
+
 
 DATABASE_URL = get_database_url()
 

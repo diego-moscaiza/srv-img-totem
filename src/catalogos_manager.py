@@ -2,6 +2,7 @@ from pathlib import Path
 from datetime import datetime
 from typing import Dict, List, Optional
 from src.database import SessionLocal, Producto
+from src.config import DOMAIN_DOCKER
 import os
 
 # Cargar .env si existe (para desarrollo local)
@@ -122,28 +123,31 @@ class SegmentoCatalogo:
                     and mes_nombre == self._convertir_mes_actual()
                 )
 
-                # Función auxiliar para construir URLs correctas de imágenes
-                def construir_url_imagen(ruta):
+                # Función auxiliar para construir URLs correctas de imágenes (retorna diccionario)
+                def construir_urls_imagen(ruta):
+                    """Retorna diccionario con ruta relativa y URL completa con DOMAIN_DOCKER"""
                     if not ruta or ruta.strip() == "":
-                        return ""
-
-                    # Si ya es una URL absoluta, devolverla tal cual
-                    if ruta.startswith("http://") or ruta.startswith("https://"):
-                        return ruta
-
-                    # Si ya tiene el prefijo /api/catalogos/, devolverla tal cual
-                    if ruta.startswith("/api/catalogos/"):
-                        return ruta
+                        return {"ruta": "", "url": ""}
 
                     # Normalizar backslashes a forward slashes
                     ruta_normalizada = ruta.replace("\\", "/")
 
-                    # Si empieza con catalogos/, agregar /api/ al inicio
-                    if ruta_normalizada.startswith("catalogos/"):
-                        return "/api/" + ruta_normalizada
+                    # Determinar la ruta relativa
+                    if ruta_normalizada.startswith("/api/catalogos/"):
+                        ruta_relativa = ruta_normalizada
+                    elif ruta_normalizada.startswith("catalogos/"):
+                        ruta_relativa = "/api/" + ruta_normalizada
+                    elif ruta_normalizada.startswith(
+                        "http://"
+                    ) or ruta_normalizada.startswith("https://"):
+                        return {"ruta": ruta_normalizada, "url": ruta_normalizada}
+                    else:
+                        ruta_relativa = "/api/catalogos/" + ruta_normalizada
 
-                    # Si no tiene prefijo, agregar /api/catalogos/
-                    return "/api/catalogos/" + ruta_normalizada
+                    # Construir URL completa con DOMAIN_DOCKER
+                    url_completa = DOMAIN_DOCKER.rstrip("/") + ruta_relativa
+
+                    return {"ruta": ruta_relativa, "url": url_completa}
 
                 producto_dict = {
                     "id": producto.codigo,
@@ -152,8 +156,8 @@ class SegmentoCatalogo:
                     "descripcion": producto.descripcion,
                     "precio": producto.precio,
                     "categoria": categoria,
-                    "imagen": construir_url_imagen(producto.imagen_listado),
-                    "imagen_caracteristicas": construir_url_imagen(
+                    "imagen": construir_urls_imagen(producto.imagen_listado),
+                    "imagen_caracteristicas": construir_urls_imagen(
                         producto.imagen_caracteristicas
                     ),
                     "cuotas": producto.cuotas,
