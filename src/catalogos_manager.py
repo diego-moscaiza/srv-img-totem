@@ -7,6 +7,7 @@ import os
 # Cargar .env si existe (para desarrollo local)
 try:
     from dotenv import load_dotenv
+
     load_dotenv()
 except ImportError:
     pass  # En Docker no necesita dotenv
@@ -22,11 +23,11 @@ def get_imagenes_base():
     imagenes_dir = os.getenv("IMAGENES_DIR")
     if imagenes_dir:
         return Path(imagenes_dir) / "catalogos"
-    
+
     # Detectar si estamos en Docker
     if Path("/srv/imagenes/catalogos").exists():
         return Path("/srv/imagenes/catalogos")
-    
+
     # Local: usar ruta relativa
     return Path("imagenes/catalogos")
 
@@ -64,8 +65,6 @@ class SegmentoCatalogo:
 
         try:
             db = SessionLocal()
-            # Forzar lectura fresca de la BD (sin caché)
-            db.expire_all()
 
             # Convertir número de mes a nombre si es necesario
             meses_map = {
@@ -91,25 +90,30 @@ class SegmentoCatalogo:
             else:
                 mes_nombre = meses_map.get(mes, mes)
 
+            # Forzar lectura fresca de la BD (sin caché de SQLAlchemy)
+            db.expire_all()
+
+            # Normalizar nombre de segmento para consistency
+            nombre_segmento_normalizado = self.nombre.strip().lower()
+
             # Consultar productos del mes y año
             productos = (
                 db.query(Producto)
                 .filter(
                     Producto.ano == int(año),
                     Producto.mes == mes_nombre,
-                    Producto.segmento == self.nombre,
+                    Producto.segmento == nombre_segmento_normalizado,
                 )
                 .all()
             )
 
-            db.close()
-
-            # Agrupar por categoría
+            # Convertir a diccionarios ANTES de cerrar la sesión para evitar lazy loading
+            catalogo_temp = {}
             for producto in productos:
                 categoria = producto.categoria
 
-                if categoria not in catalogo:
-                    catalogo[categoria] = []
+                if categoria not in catalogo_temp:
+                    catalogo_temp[categoria] = []
 
                 # Determinar si el producto está activo basado en estado y stock
                 es_disponible = producto.estado == "disponible" and producto.stock
@@ -118,6 +122,29 @@ class SegmentoCatalogo:
                     and mes_nombre == self._convertir_mes_actual()
                 )
 
+                # Función auxiliar para construir URLs correctas de imágenes
+                def construir_url_imagen(ruta):
+                    if not ruta or ruta.strip() == "":
+                        return ""
+
+                    # Si ya es una URL absoluta, devolverla tal cual
+                    if ruta.startswith("http://") or ruta.startswith("https://"):
+                        return ruta
+
+                    # Si ya tiene el prefijo /api/catalogos/, devolverla tal cual
+                    if ruta.startswith("/api/catalogos/"):
+                        return ruta
+
+                    # Normalizar backslashes a forward slashes
+                    ruta_normalizada = ruta.replace("\\", "/")
+
+                    # Si empieza con catalogos/, agregar /api/ al inicio
+                    if ruta_normalizada.startswith("catalogos/"):
+                        return "/api/" + ruta_normalizada
+
+                    # Si no tiene prefijo, agregar /api/catalogos/
+                    return "/api/catalogos/" + ruta_normalizada
+
                 producto_dict = {
                     "id": producto.codigo,
                     "codigo": producto.codigo,
@@ -125,17 +152,22 @@ class SegmentoCatalogo:
                     "descripcion": producto.descripcion,
                     "precio": producto.precio,
                     "categoria": categoria,
-                    "imagen": producto.imagen_listado,
-                    "imagen_caracteristicas": producto.imagen_caracteristicas,
+                    "imagen": construir_url_imagen(producto.imagen_listado),
+                    "imagen_caracteristicas": construir_url_imagen(
+                        producto.imagen_caracteristicas
+                    ),
                     "cuotas": producto.cuotas,
-                    "estado": producto.estado,  # disponible, no_disponible, agotado
+                    "estado": producto.estado,  # disponible, no disponible, agotado
                     "stock": producto.stock,
                     "mes_validez": f"{año}-{mes_nombre}",
                     "segmento": self.nombre,
                     "activo": es_disponible and es_mes_actual,
                 }
 
-                catalogo[categoria].append(producto_dict)
+                catalogo_temp[categoria].append(producto_dict)
+
+            catalogo = catalogo_temp
+            db.close()
 
             return catalogo
 
@@ -321,7 +353,9 @@ class CatalogoManager:
         segmentos: Optional[List[str]] = None,
     ):
         # Usar la función que detecta el entorno automáticamente
-        self.imagenes_base = Path(imagenes_base) if imagenes_base else get_imagenes_base()
+        self.imagenes_base = (
+            Path(imagenes_base) if imagenes_base else get_imagenes_base()
+        )
         self.segmentos: Dict[str, SegmentoCatalogo] = {}
 
         # Mapeo de categorías ESPECÍFICO POR SEGMENTO
@@ -347,27 +381,40 @@ class CatalogoManager:
         segmentos_default = segmentos or ["fnb", "gaso"]
         for segmento_nombre in segmentos_default:
             # Seleccionar mapa según segmento
-            categoria_map = categoria_map_fnb if segmento_nombre == "fnb" else categoria_map_gaso
+            categoria_map = (
+                categoria_map_fnb if segmento_nombre == "fnb" else categoria_map_gaso
+            )
             self.segmentos[segmento_nombre] = SegmentoCatalogo(
                 segmento_nombre, categoria_map, self.imagenes_base
             )
-        
+
         # Guardar un mapa genérico para compatibilidad (usado ocasionalmente)
         self.categoria_map = {**categoria_map_fnb, **categoria_map_gaso}
 
     def obtener_segmento(self, nombre_segmento: str = "fnb") -> SegmentoCatalogo:
         """Obtiene la instancia de un segmento específico"""
-        if nombre_segmento not in self.segmentos:
+        # Normalizar segmento a minúsculas
+        nombre_segmento_normalizado = nombre_segmento.strip().lower()
+        if nombre_segmento_normalizado not in self.segmentos:
             raise ValueError(
-                f"Segmento '{nombre_segmento}' no existe. Disponibles: {list(self.segmentos.keys())}"
+                f"Segmento '{nombre_segmento_normalizado}' no existe. Disponibles: {list(self.segmentos.keys())}"
             )
-        return self.segmentos[nombre_segmento]
+        return self.segmentos[nombre_segmento_normalizado]
 
     def invalidar_cache(self, segmento: str | None = None):
         """Invalida el caché de un segmento o todos si no se especifica"""
         if segmento:
-            if segmento in self.segmentos:
-                self.segmentos[segmento].invalidar_cache()
+            # Normalizar segmento a minúsculas
+            segmento_normalizado = segmento.strip().lower()
+            if segmento_normalizado in self.segmentos:
+                print(
+                    f"[CACHE] Invalidando caché para segmento: {segmento_normalizado}"
+                )
+                self.segmentos[segmento_normalizado].invalidar_cache()
+            else:
+                print(
+                    f"[CACHE] Advertencia: segmento '{segmento_normalizado}' no encontrado. Segmentos disponibles: {list(self.segmentos.keys())}"
+                )
         else:
             for seg in self.segmentos.values():
                 seg.invalidar_cache()

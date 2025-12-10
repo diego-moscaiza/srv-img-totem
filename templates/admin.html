@@ -615,7 +615,7 @@
                                     <label>Estado *</label>
                                     <select name="estado" required>
                                         <option value="disponible">Disponible</option>
-                                        <option value="no_disponible">No Disponible</option>
+                                        <option value="no disponible">No Disponible</option>
                                         <option value="agotado">Agotado</option>
                                     </select>
                                 </div>
@@ -1524,7 +1524,7 @@
             html += '<h4>🏷️ Clasificación</h4>';
             html += '<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">';
             html += '<div class="form-group"><label style="margin-bottom: 6px;">Segmento</label><select name="segmento"><option value="fnb" ' + (producto.segmento === 'fnb' ? 'selected' : '') + '>FNB</option><option value="gaso" ' + (producto.segmento === 'gaso' ? 'selected' : '') + '>GASO</option></select></div>';
-            html += '<div class="form-group"><label style="margin-bottom: 6px;">Estado</label><select name="estado"><option value="disponible" ' + (producto.estado === 'disponible' ? 'selected' : '') + '>Disponible</option><option value="no_disponible" ' + (producto.estado === 'no_disponible' ? 'selected' : '') + '>No Disponible</option><option value="agotado" ' + (producto.estado === 'agotado' ? 'selected' : '') + '>Agotado</option></select></div>';
+            html += '<div class="form-group"><label style="margin-bottom: 6px;">Estado</label><select name="estado"><option value="disponible" ' + (producto.estado === 'disponible' ? 'selected' : '') + '>Disponible</option><option value="no disponible" ' + (producto.estado === 'no disponible' ? 'selected' : '') + '>No Disponible</option><option value="agotado" ' + (producto.estado === 'agotado' ? 'selected' : '') + '>Agotado</option></select></div>';
             html += '</div>';
             html += '<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">';
             html += '<div class="form-group"><label style="margin-bottom: 6px;">Mes</label><select name="mes">';
@@ -1543,6 +1543,12 @@
             html += '<div class="form-group"><label style="margin-bottom: 6px;">Imagen Listado</label><select name="imagen_listado"><option value="' + (producto.imagen_listado || '') + '">' + (producto.imagen_listado || 'Seleccionar...') + '</option></select></div>';
             html += '<div class="form-group"><label style="margin-bottom: 6px;">Imagen Características</label><select name="imagen_caracteristicas"><option value="' + (producto.imagen_caracteristicas || '') + '">' + (producto.imagen_caracteristicas || 'Seleccionar...') + '</option></select></div>';
             html += '<div class="form-group"><label style="margin-bottom: 6px;">Imagen Características 2</label><select name="imagen_caracteristicas_2"><option value="' + (producto.imagen_caracteristicas_2 || '') + '">' + (producto.imagen_caracteristicas_2 || 'Seleccionar...') + '</option></select></div>';
+            html += '</div>';
+            
+            // Sección: Stock
+            html += '<div class="form-section">';
+            html += '<h4>📦 Stock</h4>';
+            html += '<div class="form-group"><label style="margin-bottom: 6px;">Stock</label><select name="stock"><option value="true" ' + (producto.stock === true ? 'selected' : '') + '>Sí (En Stock)</option><option value="false" ' + (producto.stock === false ? 'selected' : '') + '>No (Sin Stock)</option></select></div>';
             html += '</div>';
             
             // Sección: Cuotas
@@ -2118,11 +2124,16 @@
         
         async function guardarEdicionDesdeModal(modal) {
             try {
-                const formData = new FormData(modal.querySelector('form') || document.createElement('form'));
-                
-                // Recopilar datos manualmente del modal
+                // Recopilar datos manualmente del modal (no usar FormData ya que no hay form)
                 const imagenCaracteristicas = modal.querySelector('select[name="imagen_caracteristicas"]')?.value;
                 const imagenCaracteristicas2 = modal.querySelector('select[name="imagen_caracteristicas_2"]')?.value;
+                const stockValue = modal.querySelector('select[name="stock"]')?.value;
+                
+                // Convertir stock a booleano
+                let stock = productoEnEdicion.stock;
+                if (stockValue !== undefined) {
+                    stock = stockValue === 'true' || stockValue === true;
+                }
                 
                 const data = {
                     codigo: modal.querySelector('input[name="codigo"]')?.value || productoEnEdicion.codigo,
@@ -2133,14 +2144,16 @@
                     imagen_listado: modal.querySelector('select[name="imagen_listado"]')?.value || productoEnEdicion.imagen_listado,
                     imagen_caracteristicas: imagenCaracteristicas === '' ? null : (imagenCaracteristicas || productoEnEdicion.imagen_caracteristicas),
                     imagen_caracteristicas_2: imagenCaracteristicas2 === '' ? null : (imagenCaracteristicas2 || productoEnEdicion.imagen_caracteristicas_2),
-                    cuotas: JSON.parse(modal.querySelector('textarea[name="cuotas"]')?.value || JSON.stringify(productoEnEdicion.cuotas)),
+                    cuotas: JSON.parse(modal.querySelector('textarea[name="cuotas"]')?.value || JSON.stringify(productoEnEdicion.cuotas || {})),
                     mes: modal.querySelector('select[name="mes"]')?.value || productoEnEdicion.mes,
                     ano: parseInt(modal.querySelector('select[name="ano"]')?.value) || productoEnEdicion.ano,
                     segmento: modal.querySelector('select[name="segmento"]')?.value || productoEnEdicion.segmento,
-                    estado: modal.querySelector('select[name="estado"]')?.value || productoEnEdicion.estado
+                    estado: modal.querySelector('select[name="estado"]')?.value || productoEnEdicion.estado,
+                    stock: stock
                 };
                 
                 console.log('📤 Guardando producto:', data);
+                console.log('   Stock:', stock);
                 console.log('   Estado seleccionado:', modal.querySelector('select[name="estado"]')?.value);
 
                 const response = await fetch('/api/productos/' + productoEnEdicion.id, {
@@ -2155,9 +2168,11 @@
                     cargarProductos();
                 } else {
                     const error = await response.json();
+                    console.error('❌ Error en respuesta:', error);
                     mostrarAlerta('❌ Error: ' + (error.detail || 'Error desconocido'), 'error');
                 }
             } catch(e) {
+                console.error('❌ Error en guardarEdicionDesdeModal:', e);
                 mostrarAlerta('❌ Error: ' + e.message, 'error');
             }
         }
