@@ -231,9 +231,7 @@ async def obtener_imagenes_disponibles(
                                     "\\", "/"
                                 )
                                 # Construir URL completa
-                                url_completa = (
-                                    f"{SERVER_URL_EXTERNAL}/api/catalogos/{ruta_relativa_str}"
-                                )
+                                url_completa = f"{SERVER_URL_EXTERNAL}/api/catalogos/{ruta_relativa_str}"
                                 key = f"{segmento_dir.name}/{ano_dir.name}/{mes_dir.name}/{categoria_dir.name}"
                                 if key not in imagenes_disponibles["listado"]:
                                     imagenes_disponibles["listado"][key] = []
@@ -263,9 +261,7 @@ async def obtener_imagenes_disponibles(
                                     "\\", "/"
                                 )
                                 # Construir URL completa
-                                url_completa = (
-                                    f"{SERVER_URL_EXTERNAL}/api/catalogos/{ruta_relativa_str}"
-                                )
+                                url_completa = f"{SERVER_URL_EXTERNAL}/api/catalogos/{ruta_relativa_str}"
                                 key = f"{segmento_dir.name}/{ano_dir.name}/{mes_dir.name}/{categoria_dir.name}"
                                 if key not in imagenes_disponibles["caracteristicas"]:
                                     imagenes_disponibles["caracteristicas"][key] = []
@@ -1290,10 +1286,14 @@ async def obtener_catalogo_completo_activo(segmento: str):
 async def obtener_imagen_catalogo(ruta: str):
     """Obtiene imágenes de catálogos desde /api/catalogos/..."""
     try:
-        ruta_imagen = Path(IMAGENES_DIR) / "catalogos" / ruta
+        # Decodificar la URL para manejar caracteres especiales (espacios, tildes, etc.)
+        ruta_decodificada = urllib.parse.unquote(ruta)
+        ruta_imagen = Path(IMAGENES_DIR) / "catalogos" / ruta_decodificada
 
         if not ruta_imagen.exists():
-            raise HTTPException(status_code=404, detail=f"Imagen no encontrada: {ruta}")
+            raise HTTPException(
+                status_code=404, detail=f"Imagen no encontrada: {ruta_decodificada}"
+            )
 
         if not ruta_imagen.is_file():
             raise HTTPException(status_code=400, detail="Ruta inválida")
