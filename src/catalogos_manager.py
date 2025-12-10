@@ -2,7 +2,7 @@ from pathlib import Path
 from datetime import datetime
 from typing import Dict, List, Optional
 from src.database import SessionLocal, Producto
-from src.config import DOMAIN_DOCKER
+from src.config import SERVER_URL_EXTERNAL
 import os
 
 # Cargar .env si existe (para desarrollo local)
@@ -125,7 +125,7 @@ class SegmentoCatalogo:
 
                 # Función auxiliar para construir URLs correctas de imágenes (retorna diccionario)
                 def construir_urls_imagen(ruta):
-                    """Retorna diccionario con ruta relativa y URL completa con DOMAIN_DOCKER"""
+                    """Retorna diccionario con ruta relativa y URL completa con SERVER_URL_EXTERNAL"""
                     if not ruta or ruta.strip() == "":
                         return {"ruta": "", "url": ""}
 
@@ -150,8 +150,8 @@ class SegmentoCatalogo:
                     else:
                         ruta_relativa = "/api/catalogos/" + ruta_normalizada
 
-                    # Construir URL completa con DOMAIN_DOCKER
-                    url_completa = DOMAIN_DOCKER.rstrip("/") + ruta_relativa
+                    # Construir URL completa con SERVER_URL_EXTERNAL
+                    url_completa = SERVER_URL_EXTERNAL.rstrip("/") + ruta_relativa
 
                     return {"ruta": ruta_relativa, "url": url_completa}
 
