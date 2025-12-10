@@ -2,7 +2,7 @@ from pathlib import Path
 from datetime import datetime
 from typing import Dict, List, Optional
 from src.database import SessionLocal, Producto
-from src.config import SERVER_URL_EXTERNAL, IMAGENES_DIR
+from src.config import SERVER_URL, IMAGENES_DIR
 import os
 import base64
 import mimetypes
@@ -129,7 +129,7 @@ class SegmentoCatalogo:
                 def construir_urls_imagen(ruta):
                     """Retorna diccionario con ruta relativa, URL completa y endpoint base64"""
                     if not ruta or ruta.strip() == "":
-                        return {"ruta": "", "url": "", "url_base64_endpoint": ""}
+                        return {"ruta": "", "url": "", "url_base64": ""}
 
                     # Normalizar backslashes a forward slashes
                     ruta_normalizada = ruta.replace("\\", "/")
@@ -147,9 +147,9 @@ class SegmentoCatalogo:
                         else:
                             # Si no tiene /api/catalogos/, devolverla tal cual
                             return {
-                                "ruta": ruta_normalizada,
                                 "url": ruta_normalizada,
-                                "url_base64_endpoint": "",
+                                "url_relativa": ruta_normalizada,
+                                "url_base64": "",
                             }
                     # Si ya es una ruta relativa con /api/catalogos/, usarla directamente
                     elif ruta_normalizada.startswith("/api/catalogos/"):
@@ -161,18 +161,18 @@ class SegmentoCatalogo:
                     else:
                         ruta_relativa = "/api/catalogos/" + ruta_normalizada
 
-                    # Construir URL completa con SERVER_URL_EXTERNAL
-                    url_completa = SERVER_URL_EXTERNAL.rstrip("/") + ruta_relativa
+                    # Construir URL completa con SERVER_URL
+                    url_completa = SERVER_URL.rstrip("/") + ruta_relativa
 
                     # Construir endpoint base64 (similar a cómo se hace para PDFs)
                     # Extraer la ruta física relativa sin /api/catalogos/
                     ruta_fisica_relativa = ruta_relativa.replace("/api/catalogos/", "")
-                    url_base64_endpoint = f"/api/imagen-base64/{ruta_fisica_relativa}"
+                    url_base64 = f"/api/imagen-base64/{ruta_fisica_relativa}"
 
                     return {
-                        "ruta": ruta_relativa,
                         "url": url_completa,
-                        "url_base64_endpoint": url_base64_endpoint,
+                        "url_relativa": ruta_relativa,
+                        "url_base64": url_base64,
                     }
 
                 producto_dict = {
